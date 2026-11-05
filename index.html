@@ -1978,7 +1978,7 @@ function buildUi() {
   U.paperW.onchange = customPaper; U.paperH.onchange = customPaper;
   var cor = rowNum2(g2, "Paper bottom-left corner X, Y [mm]", "px", "py", "corner", 0, 1000, 1, 1, 20, 20);
   U.px = cor[0]; U.py = cor[1];
-  U.margin = rowNum(g2, "Margin [mm]", "margin", "margin", 0, 100, 1, 1, 8);
+  U.margin = rowNum(g2, "Margin [mm]", "margin", "margin", 0, 100, 1, 1, 0);
   U.lblArea = h("div", {cls:"infotxt", style:"margin-top:6px"});
   g2.appendChild(U.lblArea);
   g2.appendChild(h("div", {style:"display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px"}, [
@@ -2457,7 +2457,7 @@ function writeFiles(res, m) {
 // ------------------------------------------------------------------ Preview
 function Preview(canvas) {
   this.cv = canvas; this.ctx = canvas.getContext("2d");
-  this.bedX = 260; this.bedY = 260; this.paperX = 20; this.paperY = 20; this.paperW = 148; this.paperH = 210; this.margin = 8;
+  this.bedX = 260; this.bedY = 260; this.paperX = 20; this.paperY = 20; this.paperW = 148; this.paperH = 210; this.margin = 0;
   this.paths = null; this.frame = null; this.msg = "";
   this.sx = 0; this.sy = 0; this.dragX = 0; this.dragY = 0;
   this.simOn = false; this.simT = 0; this.tl = null;
