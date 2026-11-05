@@ -1,0 +1,2744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stiftplotter Bambulab X2D by addicted2create</title>
+<meta name="description" content="SVG to G-code for the Bambu Lab X2D with a pen holder. Runs entirely in the browser, no data is uploaded.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f3f1;
+  --panel: #fafafa;
+  --ink: #1c1c1a;
+  --muted: #6b6b66;
+  --line: #d6d6d0;
+  --accent: #2f6fd0;
+  --accent-ink: #ffffff;
+  --warn: #aa1e1e;
+  --zbg: #fff5cd;
+  --zline: #e3c968;
+  --radius: 6px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 13px/1.35 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink); background: var(--bg);
+  display: flex; flex-direction: column;
+}
+header.top { padding: 8px 16px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+header.top h1 { margin: 0; font-size: 17px; font-weight: 700; }
+header.top h1 span { font-weight: 400; color: var(--muted); }
+header.top p { margin: 0; color: var(--muted); font-size: 12px; }
+main.app { flex: 1; min-height: 0; display: grid; grid-template-columns: 392px minmax(300px, 1fr) 392px; }
+.col { overflow-y: auto; padding: 8px; background: var(--panel); }
+#colL { border-right: 1px solid var(--line); }
+#colR { border-left: 1px solid var(--line); }
+.center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.stage { flex: 1; min-height: 0; position: relative; background: #e8e8e4; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+fieldset.grp { margin: 0 0 8px; padding: 6px 10px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; min-width: 0; }
+fieldset.grp > legend { font-weight: 700; padding: 0 4px; }
+.row { display: grid; grid-template-columns: 150px 1fr 26px; align-items: center; gap: 6px; min-height: 32px; }
+.row > label.lbl { color: var(--ink); }
+.ctl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+input[type=number] { width: 80px; padding: 3px 4px; border: 1px solid #b9b9b2; border-radius: 3px; font: inherit; background: #fff; }
+select { padding: 3px 4px; border: 1px solid #b9b9b2; border-radius: 3px; font: inherit; background: #fff; max-width: 100%; }
+input:disabled, select:disabled { background: #eeeeea; color: #999; }
+.chkrow { display: grid; grid-template-columns: 1fr 26px; align-items: center; gap: 6px; min-height: 30px; }
+.chkrow label { display: flex; gap: 6px; align-items: flex-start; }
+.chkrow input { margin-top: 2px; }
+button { font: inherit; padding: 5px 10px; border: 1px solid #aaa9a2; border-radius: 4px; background: #f1f1ee; color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { background: #e7e7e3; }
+button:disabled { color: #aaa; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+button.primary:hover:not(:disabled) { background: #265fb4; }
+button.help { width: 24px; height: 24px; padding: 0; font-weight: 700; border-radius: 4px; }
+button.wide { width: 100%; }
+.btnrow { display: flex; gap: 8px; margin: 4px 0 6px; flex-wrap: wrap; }
+.btnrow button { flex: 1; min-width: 100px; }
+.infotxt { white-space: pre-line; color: var(--ink); min-height: 40px; margin: 4px 0; }
+.warntxt { white-space: pre-line; color: var(--warn); min-height: 18px; margin: 4px 0; }
+.zbox { margin: 8px -4px; padding: 6px 8px 4px; background: var(--zbg); border: 1px solid var(--zline); border-radius: var(--radius); }
+.zbox .ttl { font-weight: 700; margin: 0 0 2px; }
+.zbox .row > label.lbl { font-weight: 700; }
+#simbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #f2f2ef; border-top: 1px solid var(--line); }
+#simbar input[type=range] { flex: 1; min-width: 60px; }
+#simTime { min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+footer#status { padding: 4px 12px; background: #ececE8; border-top: 1px solid var(--line); font-size: 12px; min-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.dlg { background: #fff; border-radius: 8px; max-width: 640px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.dlg.big { max-width: 860px; height: 86vh; }
+.dlg h2 { margin: 0; padding: 12px 16px; font-size: 15px; border-bottom: 1px solid var(--line); }
+.dlg .body { padding: 12px 16px; overflow-y: auto; white-space: pre-wrap; flex: 1; }
+.dlg.big .body { font-size: 13.5px; }
+.dlg .btns { padding: 10px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.dlg .links { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.dropmark { outline: 3px dashed var(--accent); outline-offset: -6px; }
+@media (max-width: 1100px) {
+  html, body { height: auto; }
+  body { display: block; }
+  main.app { display: flex; flex-direction: column; }
+  .center { order: -1; height: 70vh; }
+  .col { overflow: visible; border: 0; }
+}
+.ctl{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;min-width:0}
+.ctl input[type=number]{flex:1 1 0;width:0;min-width:48px}
+.ctl select{flex:1 1 0;width:0;min-width:0}
+.ctl span{white-space:nowrap;font-size:12px}
+.ctl button{padding:3px 6px;white-space:nowrap}
+.btnrow .help{width:26px;flex:none}
+.modebtn{margin-left:auto;font-weight:600;background:#fff3d6;border:1px solid #d9a400;border-radius:6px;padding:4px 10px;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Stiftplotter Bambulab X2D <span>by addicted2create</span></h1>
+  <p>SVG to G-code for the 3D printer. Runs entirely in your browser, no data is uploaded.</p>
+</header>
+<main class="app">
+  <aside class="col" id="colL"></aside>
+  <section class="center">
+    <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+    <div id="simbar"></div>
+  </section>
+  <aside class="col" id="colR"></aside>
+</main>
+<footer id="status">Ready. Load an SVG file first.</footer>
+<input type="file" id="fileIn" accept=".svg,image/svg+xml" hidden>
+
+<script type="application/json" id="texts">{"tips": {"svg": "The design is always loaded as an SVG file (vector graphic).\n\nPaths, rectangles, circles, ellipses, lines, polygons and polylines are used.\n• Shapes with a black or grey fill are outlined and (if desired) hatched.\n• Shapes with a visible stroke are drawn as a line. The stroke width does not matter; the centre line is drawn.\n• White-filled shapes count as cut-outs (e.g. white details on a black area) and are not drawn.\n• Convert text to paths first (Inkscape: Path > Object to Path). It will then be drawn as an outline, though (two lines per stroke).\n\nTEXT AS A SINGLE LINE: create it in Inkscape with the \"Hershey Text\" extension (step-by-step instructions under \"Guide …\" and in the README), save as SVG and load it here.\n\nTip: you can also simply drag the SVG file into the window.", "thick": "Makes the design thicker or thinner. 0 = unchanged.\n\nFilled shapes (e.g. letters converted to paths, or areas): the contour is shifted outwards by this amount (positive value, the shape gets thicker) or inwards (negative value, the shape gets thinner). White cut-outs behave the other way round. With hatching, the hatched area grows or shrinks too.\n\nPlain lines without fill (stroke lines): with a positive value the pen draws extra lines 0.35 mm to the left and right of the line. Overall the stroke becomes about twice as wide as the value. Negative values have no effect here (you can't go thinner than the pen).\n\nTip: choose small values (e.g. 0.1 to 0.3 mm). With thin shapes and negative values the shape may collapse or self-intersect; always check the result in the preview.\n\nThe change applies in millimetres on the paper, regardless of the width.", "bed": "Size of the print bed in mm (X and Y). The preview and the limits of the G-code coordinates are based on it.\n\nPlease check against the real dimensions of your printer. Default: 256 × 256 mm.", "paper": "Width and height of your paper in mm. The selection above sets standard sizes.\n\nThe paper must fit completely on the print bed. An A4 sheet (210 × 297 mm) is too big for a 256 mm bed.", "corner": "Bed coordinate of the bottom-left paper corner in mm (X, Y). The origin (0/0) is the front-left corner of the print bed.\n\nThe paper must lie entirely on the bed. Check the position of the paper corner beforehand with a test stroke.", "margin": "Free margin all around between the paper edge and the drawing, in mm (grey dashed line in the preview). Prevents the pen from moving past the paper edge.", "width": "Width of the design on the paper in mm. The height follows from the aspect ratio of the SVG.\n\n\"Fit\" chooses the largest possible width within the paper (minus the margin), \"Center\" sets both offsets to 0.", "rot": "Rotates the design around its centre, in degrees. Positive values rotate clockwise (looking down at the paper).\n\nUse the buttons for 90° steps, e.g. for a landscape design on portrait paper.", "off": "Shifts the design relative to the centre of the paper, in mm. Horizontal positive = to the right, vertical positive = upwards.\n\nThe design can also be moved directly in the preview with the mouse.", "mirror": "Mirrors the design horizontally (left and right swapped). Useful e.g. for tracing on the back of the paper.", "clip": "Clips all lines that extend beyond the paper edge (including the margin setting), so the pen never moves off the paper.\n\nIf the option is off, the program warns before saving if anything lies outside the paper.", "outline": "Traces the outlines of the filled (black/grey) shapes with the pen.\n\nTurn off if you only want the hatching.", "stroke": "Draws the stroke lines of the SVG as lines. The stroke width is ignored; the centre line is drawn.", "hatch": "Fills black and grey areas with parallel lines (hatching). The darker the area, the denser (only with \"Grey tones\" on).\n\nWhite-filled shapes are left out of the hatching. Without this option only outlines and lines are drawn.", "spacing": "Distance between two hatch lines (or two contour lines with contour fill) in mm. Smaller = denser and darker, but much longer drawing time.\n\nWith contour fill choose roughly the pen width (0.3 to 0.4 mm) so the area is filled solid.\n\nAbout 2 to 3 times the stroke width works well (fineliner 0.3 to 0.5 mm: 0.8 to 1.5 mm; pencil: 0.6 to 1.2 mm).", "angle": "Direction of the hatching in degrees relative to the paper (0° = horizontal, 90° = vertical). Independent of the design's rotation.", "cross": "Draws the darkest areas a second time in a second direction (+90°). This creates cross-hatching and makes the area darker.", "inset": "Makes the hatch lines stop this distance (mm) before the edge of the area, so the hatch stroke doesn't stick out over the outline. About half the stroke width is a good value. 0 = up to the edge.", "grey": "Represents grey tones of the fill through the line spacing: dark areas are fully hatched, lighter greys with every 2nd, 3rd or 4th line.\n\nWithout this option all non-white fills are hatched at the same density. Very light greys are hatched only lightly.", "simp": "Smooths and simplifies the contour lines. A higher value (e.g. 0.2 mm) gives fewer points and a calmer, faster drawing, but loses fine detail. For the highest quality 0.03 to 0.1 mm. 0 = off.", "minlen": "Lines shorter than this value are left out. This removes dots and noise that would only make the pen go up and down needlessly.", "profile": "Sets drawing speed, acceleration and landing speed to quality-oriented starting values.\n\nFineliner: 20 mm/s, 800 mm/s².\nPencil: even slower (15 mm/s, 500 mm/s²), so the lead doesn't break or judder.\n\nAs soon as you change one of the three values, the selection switches to \"Custom values\".", "zup": "Z height at which the pen hovers safely above the paper (travel height). Recommended: touch height + 3 to 5 mm.\n\nHigher = safer, but every line takes a little longer.", "zdown": "THE MOST IMPORTANT VALUE!\n\nZ height at which the pen writes. On the Bambu printer Z = 0 is the position at which the nozzle touches the bed. If the pen sticks out e.g. 3 mm, the touch height is about 3.1 mm.\n\nHow to find it: home the printer, put the paper down, move the head over the middle of the paper, lower Z in 1 mm and finally 0.1 mm steps until the pen tip just touches the paper. Enter this value (with a spring-loaded holder 0.3 to 0.5 mm less for light pressure).\n\nAlways approach from above and check with a test stroke first. Too low pushes the pen against the bed!", "fdraw": "Drawing speed in mm/min (1200 = 20 mm/s). Slower = cleaner lines, less vibration.\n\nFor the highest quality: fineliner 900 to 1500, pencil 600 to 1000. If you see waves in circles or at corners, lower it further.", "accel": "Acceleration in mm/s² (sent to the printer as M204 S…). Bambu printers accelerate very hard by default, which makes lines ring at corners and curves.\n\nLow (500 to 1000) = calm, clean lines. 0 = don't send.\n\nThe printer may limit or replace the value depending on the speed profile (Silent/Standard/Sport).", "ftravel": "Speed of travel moves with the pen raised, in mm/min (6000 = 100 mm/s). This can be faster. If the paper or print head shakes a lot, lower it to 4000.", "fz": "Speed of the pen's up and down movement in mm/min. Applies to raising and to the fast part of lowering. The last millimetre before the paper runs at \"Slow landing\".", "fland": "Speed of the last 1 mm of the lowering movement before the paper, in mm/min. Setting down slowly prevents ink blobs (fineliner), broken leads (pencil) and impact marks at the start of the stroke.", "home": "Adds G28 (homing) at the start so the printer knows its position.\n\nThe pen holder must NOT be mounted yet during homing. That's what the \"Two files\" option is for: Part 1 only does the homing, Part 2 draws.", "style": "Outline only: only the outlines of the shapes and the stroke lines of the SVG are drawn.\n\nHatched: in addition, black and grey areas are filled with parallel lines (the outline is kept). White-filled shapes are left out of the hatching. Grey fills are hatched lighter (looser).\n\nContour fill (follows the edge): the area is not hatched but filled with lines that follow the contour. The outline is offset inwards step by step (like the rings of a tree trunk) until the area is full. For letters and narrow areas this is much faster than hatching, because the pen is lifted less often, and it looks cleaner. The line spacing should be about the pen width (0.3 to 0.4 mm for a solid fill). Angle and cross-hatching don't apply here. White gaps left between the rings (in narrow strokes, at stroke ends and junctions) are closed automatically by the program with centre lines and short lines. The pen only goes over already-drawn areas where necessary. Requirement: the line spacing is about the same as the pen width.", "pause": "The pen holder must not be mounted during homing. That's why two files are generated:\n\nPart 1 (_Part1_Homing.gcode) only does the homing. Then the bed moves 50 mm further down (Z down + 50 mm) so you have room for the pen holder. The head stays put in XY, then the job ends.\nThen you attach the pen holder without hurrying.\nYou start Part 2 (_Part2_Draw.gcode) yourself when you're ready. It contains no homing, first moves Z to \"pen up\" and only then starts moving in XY.\n\nThis way you decide how long the pause lasts, and the head doesn't move to the purge chute (unlike a pause with M400 U1). Important: don't switch the printer off between Part 1 and Part 2 and don't disable the motors, otherwise the position is lost.", "sim": "Plays the drawing as an animation, in the order and with the speeds from the settings. A red ring shows the head: filled = pen down, empty = travel move. Drawing is shown in the colour of the line.\n\nStart simulation / Pause / Resume: stop and continue playback. Use the slider to jump to any point. Speed: the simulation runs faster than real time (e.g. 60× = one minute of drawing in one second). End: back to the normal view with the finished drawing.\n\nThis lets you spot detours, unnecessary travel moves and the order of the lines before you start the printer. If a setting changes, everything is recalculated and the simulation starts over. The time is an estimate like the duration in the info box; the real printer may be a bit slower.", "knife": "Blade offset: distance between the swivel axis of the blade holder and the blade tip. The tip trails behind the axis (the print head). Typical values are 0.25 to 0.6 mm, usually more for blades with a larger angle (e.g. 60°). You can get the exact value from the blade's dealer or manufacturer, or measure it.\n\nToo small: corners get rounded. Too large: corners overshoot. Check with a test cut (small square) and adjust in small steps.", "cornerang": "Corner angle: from this change of direction on, the head moves in a small arc around the corner so the blade rotates and the corner comes out clean. Smaller angles (curves) are cut without an arc.\n\nDefault 25°.", "overcut": "Overcut: closed contours start on a straight edge and run a little past the starting point at the end. This makes sure the contour is cut all the way through and no bridge is left. 0.5 to 2 mm is usual.\n\nContours never start in a corner, but in the middle of their longest edge.", "zup_cut": "Height of the blade while moving (raised). The blade tip must be well above the material, normally 3 to 5 mm above “Z blade down”.\n\nCaution: too low, and the blade drags across the material while moving.", "zdown_cut": "Height of the blade holder while cutting. It sets the cutting depth: the film should be cut all the way through, the backing paper underneath should not (kiss cut).\n\nApproach from above in 0.05 mm steps and check with a small test cut. Too low: the blade cuts through the backing paper, goes into the mat or damages the build plate.\n\nThe rigid blade holder does not compensate for height differences. The material must lie flat.", "profile_cut": "Starting values for speed, acceleration and slow landing of the blade.\n\nVinyl film: 25 mm/s, 500 mm/s². Paper / thin film: 20 mm/s, 400 mm/s². Landing is especially slow so the blade doesn't jump into the material.\n\nThese are only starting values. Slower usually cuts cleaner. Do a small test cut first. As soon as you change one of the values, the selection switches to “Custom values”.", "fdraw_cut": "Cutting speed in mm/min (1500 mm/min = 25 mm/s). Too fast: the blade vibrates, corners and curves become inaccurate, the material may slip. When in doubt, go slower."}, "guide": "GUIDE - STIFTPLOTTER (PEN PLOTTER)\n==================================\n\nNext to almost every value there is a small \"?\" with an explanation.\n\n1. PREPARE THE HARDWARE\n- Attach the pen to the print head, ideally with a holder that guides the pen with spring travel in Z (especially important for pencils).\n- The pen tip must sit a few millimetres lower than the nozzle tip.\n- Fix the paper with masking tape or magnets. It must lie flat and must not slip.\n- Nozzle and bed stay cold; the G-code contains no heating commands.\n\n2. FIND THE Z HEIGHT\n- On the Bambu printer Z = 0 is the position at which the nozzle touches the bed. If the pen sticks out e.g. 3 mm, it touches the paper at about Z = 3.1 mm (3 mm + approx. 0.1 mm paper).\n- Home the printer, put the paper down, move the head over the middle of the paper.\n- Lower Z in 1 mm steps, finally in 0.1 mm steps, until the pen tip just touches the paper. Note this value.\n- \"Z pen down\" = touch height (with a spring-loaded holder 0.3 to 0.5 mm less for light pressure).\n- \"Z pen up\" = touch height + 3 to 5 mm.\n- Always approach from above, never go too low.\n\n3. CHECK THE SETTINGS\n- Enter the bed and paper size and the position of the bottom-left paper corner.\n- Choose the pen profile (fineliner or pencil).\n- To test, first draw a small, simple SVG (e.g. a square and a circle).\n- If the pen doesn't draw: lower \"Z pen down\" in 0.2 mm steps. If it presses or scratches: raise it.\n- Waves at corners and circles mean vibration: lower the drawing speed and acceleration further.\n- If the drawing isn't where you expect, correct the paper corner (X, Y).\n\n4. LOAD AND PLACE THE DESIGN\n- \"Load SVG …\" (or drag the file into the window). The design is automatically fitted to the paper.\n- Set width, rotation, offset and mirroring. In the preview the design can be moved with the mouse. The blue dashed line shows the design's frame.\n- Choose the drawing mode: outline only, hatched (angle, line spacing, cross-hatching) or contour fill (lines follow the edge inwards, line spacing about the pen width; usually the best choice for text).\n- \"Change thickness\": makes filled shapes thicker or thinner (contour outwards/inwards), and stroke lines thicker (extra lines next to the line).\n\nTEXT AS A SINGLE LINE (INKSCAPE)\nNormal fonts are drawn as an outline (two lines per stroke). For a single line per stroke you need single-line fonts. Inkscape includes them from version 1.0:\n1. In Inkscape click on the canvas with the Text tool (T) and type the text. Font and size don't matter; you set the size here via \"Width\".\n2. Click the text with the Selector tool (arrow) so it is selected.\n3. Open Extensions > Text > Hershey Text …\n4. In the dialog choose a single-line font (e.g. a simple sans font with \"1-stroke\", or a script font). Turn on live preview if available, then Apply and Close.\n5. Delete the original text if it is still there. Only the single-line text remains.\n6. Save via File > Save As … as SVG (Inkscape SVG or Plain SVG).\n7. Here: \"Load SVG …\". The drawing mode doesn't matter for single-line text.\n\nSIMULATION\n- Below the preview: \"Start simulation\" plays back the drawing (selectable speed, slider to jump). A red ring shows the head. \"End\" shows the finished drawing again.\n\n5. SAVE THE G-CODE AND PRINT\n- The two Z heights are right above the save button. After clicking \"Save G-code …\" the program explicitly asks once more whether \"Z pen up\" and \"Z pen down\" are correct. It only continues after \"Yes\".\n- Then transfer the file to the printer.\n- With \"Two files\" you get Part 1 (homing only) and Part 2 (drawing). Start Part 1, then attach the pen holder, then start Part 2 when you're ready.\n- On the first real run stay next to the printer, finger on the stop button.\n\nCAUTION\n- The pen holder must not be mounted yet during homing (G28). So start Part 1 (homing only) first, then attach the holder and start Part 2. Whether the X2D keeps its position between jobs has not been tested.\n- On printers with two nozzles the unused nozzle must not drag over the paper or the pen.\n- It's not certain that your printer accepts a raw .gcode file. If the file is rejected, a .gcode.3mf from Bambu Studio is needed.\n- Set a calm speed profile on the printer (Silent or Standard). A higher profile can override the values in the G-code.\n", "guideCut": "CUTTING GUIDE (DRAG KNIFE)\n==========================\n\nIn cutting mode only the contours of the SVG are cut (no fill, no hatching). Holes, e.g. in letters like O or A, are cut too. Inner contours come first, the outer edge last, so the part stays held as long as possible.\n\nNext to almost every value there is a small \"?\" with an explanation.\n\n1. PREPARE THE HARDWARE\n- Insert the blade into the blade holder. The blade should only protrude a little; for thin film only slightly more than the film thickness (knurled cap on the holder, follow the manufacturer's instructions).\n- Attach the blade holder to the print head. It must sit firmly and must not wobble.\n- Lay the material (e.g. sticker film on backing paper) flat and non-slip on a cutting mat or sacrificial board and fix it with masking tape. The build plate must be protected.\n- Nozzle and bed stay cold; the G-code contains no heating commands.\n- Careful, the blade is sharp. Don't touch the tip when installing and adjusting it.\n\n2. FIND THE Z HEIGHT\n- On the Bambu printer Z = 0 is the position at which the nozzle touches the bed. Depending on the holder, the blade tip is a few millimetres lower.\n- Home the printer, put the material down, move the head over the material.\n- Lower from above in 1 mm steps, finally in 0.05 mm steps, until the blade just touches the material. Never go too low.\n- \"Z blade down\" = height at which the film is cut all the way through but the backing paper is not (kiss cut). You can only find it with test cuts.\n- \"Z blade up\" = touch height + 3 to 5 mm.\n\n3. TEST CUT\n- First cut a small square (e.g. 20 x 20 mm) and a small circle, ideally on a scrap piece.\n- Film not cut through: lower Z in 0.05 mm steps. Backing paper cut through or deeply scored: raise Z.\n- Corners rounded or overshooting: adjust the blade offset (distance from the swivel axis to the blade tip, typically 0.25 to 0.6 mm).\n- Contour not fully closed: increase the overcut.\n- Material slips or blade vibrates: lower speed and acceleration.\n\n4. LOAD AND PLACE THE DESIGN\n- \"Load SVG …\" (or drag the file into the window). The design is automatically fitted to the material.\n- Convert text and shapes to paths in Inkscape first (Path > Object to Path). Single-line fonts (Hershey) are unsuitable for cutting because they are only lines without an outline.\n- Only shapes with an outline or dark fill are cut. Light or white shapes (e.g. a white star on a black disc) count as cut-outs and are NOT cut. If you want a hole there, create a real hole in Inkscape (Path > Difference).\n- Set width, rotation, offset and mirroring. In the preview the design can be moved with the mouse. The simulation shows the head's path. The small arcs at corners and the overcut are intentional.\n- Paper size and position stand for the piece of material (sticker sheet). The margin limits the cutting area.\n\n5. SAVE THE G-CODE AND CUT\n- The two Z heights are right above the save button. After clicking \"Save cutting G-code …\" the program first asks about the Z heights and then for a safety check. It only continues after \"Yes\".\n- Part 1 (homing only) is started WITHOUT the blade holder. Then attach the blade holder and start Part 2 (cutting).\n- On the first run stay next to the printer, hand on the stop button.\n\nCAUTION\n- Everything at your own risk. Cutting with a 3D printer is a non-intended use and can damage the printer, build plate, blade and material.\n- A wrong Z value can drive the blade into the bed. Always approach from above.\n- The blade holder is rigid and does not compensate for height differences. Only cut thin material that lies flat (film, paper). Don't cut thick or hard material.\n- Lateral forces put strain on the print head. Choose low speed and acceleration.\n- Keep your hands out of the working area while the printer is running.\n- It's not certain that your printer accepts a raw .gcode file. If the file is rejected, a .gcode.3mf from Bambu Studio is needed.\n"}</script>
+<script type="text/plain" id="engine-src">"use strict";
+/* Calculation core: geometry, offset, hatching, contour fill, ordering, G-code.
+   Runs in the web worker and in the main thread (identical code). Points are {x, y}, all dimensions in mm. */
+var Engine = (function () {
+  var JoinTol = 0.02;
+
+  function roundEven(v) {            // like .NET Math.Round (round half to even)
+    var f = Math.floor(v), d = v - f;
+    if (d < 0.5) return f;
+    if (d > 0.5) return f + 1;
+    return (f % 2 === 0) ? f : f + 1;
+  }
+
+  // ------------------------------------------------------------------ Geo
+  function dist(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+  function length(p) { var s = 0; for (var i = 1; i < p.length; i++) s += dist(p[i - 1], p[i]); return s; }
+
+  /** Douglas-Peucker */
+  function simplify(pts, eps) {
+    if (pts.length < 3 || eps <= 0) return pts;
+    var keep = new Array(pts.length); for (var k = 0; k < keep.length; k++) keep[k] = false;
+    keep[0] = true; keep[pts.length - 1] = true;
+    var st = [[0, pts.length - 1]];
+    while (st.length > 0) {
+      var ab = st.pop(), a = ab[0], b = ab[1];
+      var md = 0, mi = -1;
+      var ax = pts[a].x, ay = pts[a].y;
+      var dx = pts[b].x - ax, dy = pts[b].y - ay;
+      var l2 = dx * dx + dy * dy;
+      for (var i = a + 1; i < b; i++) {
+        var px = pts[i].x, py = pts[i].y, d;
+        if (l2 === 0) {
+          d = Math.sqrt((px - ax) * (px - ax) + (py - ay) * (py - ay));
+        } else {
+          var t = ((px - ax) * dx + (py - ay) * dy) / l2;
+          if (t < 0) t = 0; else if (t > 1) t = 1;
+          var qx = ax + t * dx - px, qy = ay + t * dy - py;
+          d = Math.sqrt(qx * qx + qy * qy);
+        }
+        if (d > md) { md = d; mi = i; }
+      }
+      if (md > eps && mi > 0) { keep[mi] = true; st.push([a, mi]); st.push([mi, b]); }
+    }
+    var r = [];
+    for (var j = 0; j < pts.length; j++) if (keep[j]) r.push(pts[j]);
+    return r;
+  }
+
+  /** Liang-Barsky */
+  function clipSeg(a, b, x0, y0, x1, y1) {
+    var t0 = 0, t1 = 1, dx = b.x - a.x, dy = b.y - a.y;
+    var P = [-dx, dx, -dy, dy];
+    var Q = [a.x - x0, x1 - a.x, a.y - y0, y1 - a.y];
+    for (var i = 0; i < 4; i++) {
+      if (P[i] === 0) {
+        if (Q[i] < 0) return null;
+      } else {
+        var t = Q[i] / P[i];
+        if (P[i] < 0) { if (t > t1) return null; if (t > t0) t0 = t; }
+        else { if (t < t0) return null; if (t < t1) t1 = t; }
+      }
+    }
+    return {
+      pa: { x: a.x + t0 * dx, y: a.y + t0 * dy },
+      pb: { x: a.x + t1 * dx, y: a.y + t1 * dy },
+      startKept: t0 === 0, endKept: t1 === 1
+    };
+  }
+
+  function clipRect(p, x0, y0, x1, y1, output) {
+    var cur = null;
+    for (var i = 1; i < p.length; i++) {
+      var c = clipSeg(p[i - 1], p[i], x0, y0, x1, y1);
+      if (c === null) {
+        if (cur !== null) { flush(cur, output); cur = null; }
+        continue;
+      }
+      if (cur === null) { cur = [c.pa]; }
+      else if (!c.startKept) { flush(cur, output); cur = [c.pa]; }
+      cur.push(c.pb);
+      if (!c.endKept) { flush(cur, output); cur = null; }
+    }
+    if (cur !== null) flush(cur, output);
+  }
+  function flush(cur, output) { if (cur.length >= 2) output.push(cur); }
+
+  // ------------------------------------------------------------------ Offset
+  var OffPitch = 0.35;
+  var MinDen = 2.0 / 9.0;
+
+  function dedupe(p, closed) {
+    var r = [];
+    for (var i = 0; i < p.length; i++) {
+      var q = p[i];
+      if (r.length === 0 || dist(r[r.length - 1], q) > 1e-6) r.push(q);
+    }
+    if (closed && r.length > 1 && dist(r[0], r[r.length - 1]) <= 1e-6) r.pop();
+    return r;
+  }
+
+  /** Offset a line sideways. sgn = +1 left of the direction of travel, -1 right. */
+  function offLine(src, closed, d, sgn) {
+    var p = dedupe(src, closed);
+    var n = p.length;
+    if (n < 2) return src;
+    var ne = closed ? n : n - 1;
+    var nx = new Array(ne), ny = new Array(ne);
+    for (var i = 0; i < ne; i++) {
+      var a = p[i], b = p[(i + 1) % n];
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      nx[i] = sgn * (-dy / len);
+      ny[i] = sgn * (dx / len);
+    }
+    var r = new Array(n);
+    for (var j = 0; j < n; j++) {
+      var e0, e1, h0, h1;
+      if (closed) { e0 = (j - 1 + n) % n; e1 = j; h0 = true; h1 = true; }
+      else { e0 = j - 1; e1 = j; h0 = e0 >= 0; h1 = e1 < ne; }
+      var ox, oy;
+      if (h0 && h1) {
+        var mx = nx[e0] + nx[e1], my = ny[e0] + ny[e1];
+        var den = 1.0 + nx[e0] * nx[e1] + ny[e0] * ny[e1];
+        if (den >= MinDen) { ox = mx / den; oy = my / den; }
+        else {
+          var ml = Math.sqrt(mx * mx + my * my);
+          if (ml < 1e-9) { ox = nx[e0]; oy = ny[e0]; }
+          else { ox = mx / ml; oy = my / ml; }
+        }
+      } else if (h0) { ox = nx[e0]; oy = ny[e0]; }
+      else { ox = nx[e1]; oy = ny[e1]; }
+      r[j] = { x: p[j].x + d * ox, y: p[j].y + d * oy };
+    }
+    return r;
+  }
+
+  function inside(polys, evenOdd, x, y) {
+    var wind = 0, cross = 0;
+    for (var k = 0; k < polys.length; k++) {
+      var p = polys[k], n = p.length;
+      if (n < 3) continue;
+      for (var i = 0, j = n - 1; i < n; j = i++) {
+        var yi = p[i].y, yj = p[j].y;
+        if ((yi > y) !== (yj > y)) {
+          var xi = p[i].x + (y - yi) * (p[j].x - p[i].x) / (yj - yi);
+          if (xi > x) { cross++; wind += (yj > yi) ? 1 : -1; }
+        }
+      }
+    }
+    return evenOdd ? (cross & 1) === 1 : wind !== 0;
+  }
+
+  /** Offset all contours of a filled shape: d > 0 grows, d < 0 shrinks. */
+  function offShape(polys, evenOdd, d) {
+    var res = [];
+    for (var k = 0; k < polys.length; k++) {
+      var src = polys[k];
+      var p = dedupe(src, true), n = p.length;
+      if (n < 3) { res.push(src); continue; }
+      var best = 0, bl = -1;
+      for (var i = 0; i < n; i++) {
+        var l = dist(p[i], p[(i + 1) % n]);
+        if (l > bl) { bl = l; best = i; }
+      }
+      var a = p[best], b = p[(best + 1) % n];
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var lenE = Math.sqrt(dx * dx + dy * dy);
+      var lx = -dy / lenE, ly = dx / lenE;
+      var tx = 0.5 * (a.x + b.x) + lx * 0.02, ty = 0.5 * (a.y + b.y) + ly * 0.02;
+      var leftInside = inside(polys, evenOdd, tx, ty);
+      var sgn = leftInside ? -1 : 1;
+      res.push(offLine(p, true, d, sgn));
+    }
+    return res;
+  }
+
+  /** Thicken a stroke line: extra lines left and right at distance OffPitch. */
+  function thicken(q, closed, thick, simp, outList) {
+    var k = roundEven(thick / OffPitch);
+    if (k < 1) k = 1;
+    if (k > 12) k = 12;
+    for (var s = 1; s <= k; s++)
+      for (var side = -1; side <= 1; side += 2) {
+        var o = offLine(q, closed, s * OffPitch, side);
+        if (closed && o.length >= 3) { o = o.slice(); o.push(o[0]); }
+        o = simplify(o, simp);
+        if (o.length >= 2) outList.push(o);
+      }
+  }
+
+  // ------------------------------------------------------------------ Contour fill
+  var MinPocket = 0.6;
+
+  function Boundary(cell) {
+    this.cell = cell;
+    this.segs = [];
+    this.grid = new Map();
+  }
+  Boundary.key = function (cx, cy) { return cx * 4194304 + cy; };
+  Boundary.prototype.addPolygon = function (p) { this.addPolyline(p, true); };
+  Boundary.prototype.addPolyline = function (p, closed) {
+    var n = p.length;
+    if (n < 2) return;
+    var ne = closed ? n : n - 1;
+    for (var i = 0; i < ne; i++) {
+      var a = p[i], b = p[(i + 1) % n];
+      this.addSegment(a.x, a.y, b.x, b.y, 0);
+    }
+  };
+  Boundary.prototype.addSegment = function (x1, y1, x2, y2, depth) {
+    var cell = this.cell;
+    var cx0 = Math.floor(Math.min(x1, x2) / cell), cx1 = Math.floor(Math.max(x1, x2) / cell);
+    var cy0 = Math.floor(Math.min(y1, y2) / cell), cy1 = Math.floor(Math.max(y1, y2) / cell);
+    var cells = (cx1 - cx0 + 1) * (cy1 - cy0 + 1);
+    if (cells > 16 && depth < 20) {
+      var mx = 0.5 * (x1 + x2), my = 0.5 * (y1 + y2);
+      this.addSegment(x1, y1, mx, my, depth + 1);
+      this.addSegment(mx, my, x2, y2, depth + 1);
+      return;
+    }
+    var id = this.segs.length;
+    this.segs.push([x1, y1, x2, y2]);
+    for (var cx = cx0; cx <= cx1; cx++)
+      for (var cy = cy0; cy <= cy1; cy++) {
+        var k = Boundary.key(cx, cy), l = this.grid.get(k);
+        if (l === undefined) { l = []; this.grid.set(k, l); }
+        l.push(id);
+      }
+  };
+  var _qx = 0, _qy = 0;
+  function closest(s, x, y) {
+    var dx = s[2] - s[0], dy = s[3] - s[1];
+    var len2 = dx * dx + dy * dy;
+    var t = len2 < 1e-18 ? 0 : ((x - s[0]) * dx + (y - s[1]) * dy) / len2;
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    _qx = s[0] + t * dx;
+    _qy = s[1] + t * dy;
+    var ex = _qx - x, ey = _qy - y;
+    return ex * ex + ey * ey;
+  }
+  /** true if any segment lies closer than r to the point. */
+  Boundary.prototype.closer = function (x, y, r) {
+    var cell = this.cell;
+    var cx0 = Math.floor((x - r) / cell), cx1 = Math.floor((x + r) / cell);
+    var cy0 = Math.floor((y - r) / cell), cy1 = Math.floor((y + r) / cell);
+    var r2 = r * r;
+    for (var cx = cx0; cx <= cx1; cx++)
+      for (var cy = cy0; cy <= cy1; cy++) {
+        var l = this.grid.get(Boundary.key(cx, cy));
+        if (l === undefined) continue;
+        for (var i = 0; i < l.length; i++) {
+          if (closest(this.segs[l[i]], x, y) < r2) return true;
+        }
+      }
+    return false;
+  };
+  /** Nearest edge point within r; with hasDir only points in the opposite direction to (ux, uy). */
+  Boundary.prototype.nearest = function (x, y, r, hasDir, ux, uy) {
+    var cell = this.cell;
+    var cx0 = Math.floor((x - r) / cell), cx1 = Math.floor((x + r) / cell);
+    var cy0 = Math.floor((y - r) / cell), cy1 = Math.floor((y + r) / cell);
+    var best = r * r, found = false, qxo = 0, qyo = 0;
+    for (var cx = cx0; cx <= cx1; cx++)
+      for (var cy = cy0; cy <= cy1; cy++) {
+        var l = this.grid.get(Boundary.key(cx, cy));
+        if (l === undefined) continue;
+        for (var i = 0; i < l.length; i++) {
+          var d2 = closest(this.segs[l[i]], x, y);
+          if (d2 >= best) continue;
+          if (hasDir) {
+            var d = Math.sqrt(d2);
+            if ((_qx - x) * ux + (_qy - y) * uy >= -0.2 * d) continue;
+          }
+          best = d2; found = true; qxo = _qx; qyo = _qy;
+        }
+      }
+    if (!found) return null;
+    return { x: qxo, y: qyo, dist: Math.sqrt(best) };
+  };
+
+  function contourRun(shapes, spacing, simp, outList) {
+    for (var i = 0; i < shapes.length; i++) {
+      var black = shapes[i];
+      if (black.erase) continue;
+      var whites = [];
+      for (var j = i + 1; j < shapes.length; j++) if (shapes[j].erase) whites.push(shapes[j]);
+      fillShape(black, whites, spacing * Math.max(1, black.step), simp, outList);
+    }
+  }
+
+  function fillShape(black, whites, pitch, simp, outList) {
+    var cell = Math.max(0.6, pitch * 2.0);
+    var bd = new Boundary(cell);
+    var drawn = new Boundary(cell);
+    var k, i, j;
+    for (i = 0; i < black.polys.length; i++) { bd.addPolygon(black.polys[i]); drawn.addPolygon(black.polys[i]); }
+    for (i = 0; i < whites.length; i++) for (j = 0; j < whites[i].polys.length; j++) bd.addPolygon(whites[i].polys[j]);
+
+    // ---- 1. Rings inwards
+    var levels = [];
+    for (k = 0; k <= 400; k++) {
+      var de = k === 0 ? 0.05 * pitch : k * pitch;
+      var lv = { D: de, pieces: [] };
+      var emit = [];
+      var loops = offShape(black.polys, black.evenOdd, -de);
+      for (i = 0; i < loops.length; i++)
+        pieces(loops[i], de, pitch, black, whites, -1, bd, lv.pieces, k > 0 ? emit : null);
+      for (var wi = 0; wi < whites.length; wi++) {
+        var w = whites[wi];
+        var wl = offShape(w.polys, w.evenOdd, de);
+        for (i = 0; i < wl.length; i++)
+          pieces(wl[i], de, pitch, black, whites, wi, bd, lv.pieces, emit);
+      }
+      for (i = 0; i < emit.length; i++) {
+        var sp = simplify(emit[i], simp);
+        if (sp.length < 2) continue;
+        outList.push(sp);
+        drawn.addPolyline(sp, false);
+      }
+      if (k > 0 && lv.pieces.length === 0) break;
+      levels.push(lv);
+    }
+
+    // ---- 2. Centre lines in narrow strips
+    var centers = new Boundary(cell);
+    for (var li = 0; li < levels.length; li++) {
+      var lev = levels[li];
+      var next = null;
+      if (li + 1 < levels.length) {
+        next = new Boundary(cell);
+        for (i = 0; i < levels[li + 1].pieces.length; i++) next.addPolyline(levels[li + 1].pieces[i], false);
+      }
+      for (var pi = 0; pi < lev.pieces.length; pi++) {
+        var pc = lev.pieces[pi];
+        var cur = [];
+        for (var vi = 0; vi < pc.length; vi++) {
+          var v = pc[vi];
+          var has = false, m = null;
+          var frontier = next === null || !next.closer(v.x, v.y, 1.6 * pitch);
+          if (frontier) {
+            var q1 = bd.nearest(v.x, v.y, lev.D * 1.5 + 2.0 * pitch, false, 0, 0);
+            if (q1 !== null && q1.dist > 1e-9) {
+              var ux = (q1.x - v.x) / q1.dist, uy = (q1.y - v.y) / q1.dist;
+              var q2 = bd.nearest(v.x, v.y, q1.dist + 3.0 * pitch, true, ux, uy);
+              if (q2 !== null && q2.dist - q1.dist > 0.9 * pitch) {
+                m = { x: 0.5 * (q1.x + q2.x), y: 0.5 * (q1.y + q2.y) };
+                has = !centers.closer(m.x, m.y, 0.45 * pitch);
+              }
+            }
+          }
+          if (has) cur.push(m);
+          else cur = flushCenter(cur, pitch, simp, centers, drawn, outList);
+        }
+        flushCenter(cur, pitch, simp, centers, drawn, outList);
+      }
+    }
+
+    // ---- 3. Leftover pockets
+    fillPockets(black, whites, pitch, drawn, outList);
+  }
+
+  function flushCenter(cur, pitch, simp, centers, drawn, outList) {
+    if (cur.length >= 2) {
+      if (length(cur) >= Math.max(1.5 * pitch, MinPocket)) {
+        var sp = simplify(cur, simp);
+        if (sp.length >= 2) {
+          outList.push(sp);
+          centers.addPolyline(cur, false);
+          drawn.addPolyline(sp, false);
+        }
+      }
+    }
+    return [];
+  }
+
+  /** Collect valid parts of an offset contour as dense line pieces. */
+  function pieces(loop, d, pitch, black, whites, own, bd, all, emit) {
+    var n = loop.length;
+    if (n < 3) return;
+    var ok = new Array(n);
+    var cnt = 0;
+    var r = d * 0.97;
+    for (var i = 0; i < n; i++) {
+      var v = loop[i];
+      var good = true;
+      if (own >= 0) good = inside(black.polys, black.evenOdd, v.x, v.y);
+      if (good)
+        for (var w = 0; w < whites.length; w++) {
+          if (inside(whites[w].polys, whites[w].evenOdd, v.x, v.y)) { good = false; break; }
+        }
+      if (good && bd.closer(v.x, v.y, r)) good = false;
+      ok[i] = good;
+      if (good) cnt++;
+    }
+    if (cnt === 0) return;
+    if (cnt === n) {
+      var t = loop.slice(); t.push(t[0]);
+      all.push(t);
+      if (emit !== null) emit.push(t);
+      return;
+    }
+    var start = 0;
+    while (ok[start]) start++;
+    var run = [];
+    for (var s = 1; s <= n; s++) {
+      var idx = (start + s) % n;
+      if (ok[idx]) run.push(loop[idx]);
+      else {
+        if (run.length >= 2) {
+          if (length(run) >= 2.0 * pitch) {
+            all.push(run);
+            if (emit !== null) emit.push(run);
+          }
+        }
+        run = [];
+      }
+    }
+  }
+
+  function fillPockets(black, whites, pitch, drawn, outList) {
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    var i, j;
+    for (i = 0; i < black.polys.length; i++)
+      for (j = 0; j < black.polys[i].length; j++) {
+        var q = black.polys[i][j];
+        if (q.x < minX) minX = q.x;
+        if (q.x > maxX) maxX = q.x;
+        if (q.y < minY) minY = q.y;
+        if (q.y > maxY) maxY = q.y;
+      }
+    if (maxX <= minX || maxY <= minY) return;
+    var g = Math.max(0.015, 0.15 * pitch);
+    var ystep = 0.25 * pitch;
+    var est = ((maxX - minX) / g) * ((maxY - minY) / ystep);
+    if (est > 4e6) { var f = Math.sqrt(est / 4e6); g *= f; ystep *= f; }
+    var cover = 0.53 * pitch;
+    var ext = 0.25 * pitch;
+
+    for (var y = maxY - 0.5 * pitch; y > minY; y -= ystep) {
+      var iv = intervals(black.polys, black.evenOdd, y);
+      if (iv.length === 0) continue;
+      for (i = 0; i < whites.length; i++) {
+        var wi = intervals(whites[i].polys, whites[i].evenOdd, y);
+        if (wi.length > 0) iv = subtractIv(iv, wi);
+      }
+      for (i = 0; i < iv.length; i++) {
+        var seg = iv[i];
+        var runStart = NaN, runEnd = NaN, runCount = 0;
+        for (var x = seg[0]; x <= seg[1] + 1e-9; x += g) {
+          var white = !drawn.closer(x, y, cover);
+          if (white) {
+            if (runCount === 0) runStart = x;
+            runEnd = x;
+            runCount++;
+          } else {
+            addPocketLine(runStart, runEnd, runCount, y, seg, ext, drawn, outList);
+            runCount = 0;
+          }
+        }
+        addPocketLine(runStart, runEnd, runCount, y, seg, ext, drawn, outList);
+      }
+    }
+  }
+
+  function addPocketLine(runStart, runEnd, runCount, y, seg, ext, drawn, outList) {
+    if (runCount < 1) return;
+    var x0 = Math.max(seg[0], runStart - ext);
+    var x1 = Math.min(seg[1], runEnd + ext);
+    if (x1 - x0 < MinPocket) {
+      var c = 0.5 * (x0 + x1);
+      x0 = Math.max(seg[0], c - 0.5 * MinPocket);
+      x1 = Math.min(seg[1], c + 0.5 * MinPocket);
+    }
+    if (x1 <= x0) return;
+    var ln = [{ x: x0, y: y }, { x: x1, y: y }];
+    outList.push(ln);
+    drawn.addPolyline(ln, false);
+  }
+
+  /** Inner sections [a, b] of the shape on row y (respecting the fill rule). */
+  function intervals(polys, evenOdd, y) {
+    var cr = [];
+    for (var k = 0; k < polys.length; k++) {
+      var p = polys[k], n = p.length;
+      if (n < 3) continue;
+      for (var i = 0, j = n - 1; i < n; j = i++) {
+        var yi = p[i].y, yj = p[j].y;
+        if ((yi > y) !== (yj > y)) {
+          var x = p[i].x + (y - yi) * (p[j].x - p[i].x) / (yj - yi);
+          cr.push([x, yj > yi ? 1.0 : -1.0]);
+        }
+      }
+    }
+    cr.sort(function (a, b) { return a[0] - b[0]; });
+    var res = [], wind = 0, ins = false, start = 0;
+    for (var c = 0; c < cr.length; c++) {
+      var before = evenOdd ? ins : wind !== 0;
+      if (evenOdd) ins = !ins; else wind += cr[c][1];
+      var after = evenOdd ? ins : wind !== 0;
+      if (!before && after) start = cr[c][0];
+      else if (before && !after) res.push([start, cr[c][0]]);
+    }
+    return res;
+  }
+
+  function subtractIv(a, b) {
+    var res = a;
+    for (var i = 0; i < b.length; i++) {
+      var cut = b[i], next = [];
+      for (var j = 0; j < res.length; j++) {
+        var s = res[j];
+        if (cut[1] <= s[0] || cut[0] >= s[1]) { next.push(s); continue; }
+        if (s[0] < cut[0]) next.push([s[0], cut[0]]);
+        if (cut[1] < s[1]) next.push([cut[1], s[1]]);
+      }
+      res = next;
+    }
+    return res;
+  }
+
+  // ------------------------------------------------------------------ Plot
+  function Placement(d, p) {
+    this.cx = 0.5 * (d.minX + d.maxX);
+    this.cy = 0.5 * (d.minY + d.maxY);
+    this.s = p.width / (d.maxX - d.minX);
+    var r = p.rot * Math.PI / 180.0;
+    this.cr = Math.cos(r);
+    this.sr = Math.sin(r);
+    this.px = p.paperX + p.paperW / 2.0 + p.offU;
+    this.py = p.paperY + p.paperH / 2.0 + p.offV;
+    this.mirror = p.mirror;
+  }
+  /** Positive rotation = clockwise (looking down at the paper). */
+  Placement.prototype.apply = function (x, y) {
+    var u = (x - this.cx) * this.s;
+    var v = -(y - this.cy) * this.s;
+    if (this.mirror) u = -u;
+    return { x: this.px + u * this.cr + v * this.sr, y: this.py - u * this.sr + v * this.cr };
+  };
+
+  function frameOf(d, p) {
+    var pl = new Placement(d, p);
+    return [pl.apply(d.minX, d.minY), pl.apply(d.maxX, d.minY), pl.apply(d.maxX, d.maxY), pl.apply(d.minX, d.maxY)];
+  }
+
+  function build(d, p) {
+    var res = { paths: [], frame: null, drawLen: 0, travelLen: 0, seconds: 0, liftCount: 0,
+                outsidePaper: false, outsideBed: false, hatchLines: 0, outlinePaths: 0 };
+    var pl = new Placement(d, p);
+    var outlines = [], tshapes = [];
+    var anyDark = false;
+
+    for (var si = 0; si < d.shapes.length; si++) {
+      var s = d.shapes[si];
+      var fillMode = p.hatch || p.contour;
+      var hatchThis = fillMode && s.fill === 1;
+      var eraseThis = fillMode && s.fill === 2;
+      var ts = null;
+      if (hatchThis || eraseThis) {
+        ts = { polys: [], evenOdd: s.evenOdd, erase: eraseThis, step: 1 };
+        if (hatchThis) {
+          anyDark = true;
+          if (p.grey) {
+            var dark = 1.0 - s.lum;
+            ts.step = dark >= 0.66 ? 1 : (dark >= 0.40 ? 2 : (dark >= 0.28 ? 3 : 4));
+          }
+        }
+      }
+      var asStroke = s.stroke && p.drawStrokes;
+      var asOutline = s.fill === 1 && p.outlineFills;
+      var qs = [];
+      for (var ci = 0; ci < s.contours.length; ci++) {
+        var c0 = s.contours[ci], q0 = new Array(c0.pts.length);
+        for (var i = 0; i < q0.length; i++) q0[i] = pl.apply(c0.pts[i].x, c0.pts[i].y);
+        qs.push(q0);
+      }
+      if (Math.abs(p.thick) > 1e-9 && (s.fill === 1 || s.fill === 2))
+        qs = offShape(qs, s.evenOdd, s.fill === 1 ? p.thick : -p.thick);
+      for (var cj = 0; cj < s.contours.length; cj++) {
+        var c = s.contours[cj], q = qs[cj];
+        if (ts !== null && q.length >= 3) ts.polys.push(q);
+        if (asStroke || asOutline) {
+          var closed = asStroke ? c.closed : true;
+          var line = q;
+          if (closed && q.length >= 3) { line = q.slice(); line.push(q[0]); }
+          line = simplify(line, p.simplify);
+          if (line.length >= 2) outlines.push(line);
+          if (p.thick > 1e-9 && s.fill === 0 && asStroke) thicken(q, c.closed, p.thick, p.simplify, outlines);
+        }
+      }
+      if (ts !== null && ts.polys.length > 0) tshapes.push(ts);
+    }
+    res.outlinePaths = outlines.length;
+
+    var hatch = [];
+    if (p.hatch && anyDark && p.spacing > 0.05) {
+      hatchPass(tshapes, p.angle, p.spacing, p.inset, false, hatch);
+      if (p.cross) hatchPass(tshapes, p.angle + 90.0, p.spacing, p.inset, true, hatch);
+    } else if (p.contour && anyDark && p.spacing > 0.05) {
+      contourRun(tshapes, p.spacing, p.simplify, hatch);
+    }
+    res.hatchLines = hatch.length;
+
+    var all = outlines.concat(hatch);
+    var x0 = p.paperX + p.margin, y0 = p.paperY + p.margin;
+    var x1 = p.paperX + p.paperW - p.margin, y1 = p.paperY + p.paperH - p.margin;
+    if (p.clip && x1 > x0 && y1 > y0) {
+      var cl = [];
+      for (var ai = 0; ai < all.length; ai++) clipRect(all[ai], x0, y0, x1, y1, cl);
+      all = cl;
+    }
+    var keep = [];
+    for (var ki = 0; ki < all.length; ki++) if (length(all[ki]) >= p.minLen) keep.push(all[ki]);
+
+    var tol = 0.05;
+    for (var a = 0; a < keep.length; a++)
+      for (var b = 0; b < keep[a].length; b++) {
+        var pt = keep[a][b];
+        if (pt.x < p.paperX - tol || pt.x > p.paperX + p.paperW + tol || pt.y < p.paperY - tol || pt.y > p.paperY + p.paperH + tol) res.outsidePaper = true;
+        if (pt.x < -tol || pt.x > p.bedX + tol || pt.y < -tol || pt.y > p.bedY + tol) res.outsideBed = true;
+      }
+
+    var start = { x: p.paperX, y: p.paperY };
+    if (p.cut) res.paths = knife(orderCut(cutStarts(keep), start), p);
+    else res.paths = order(keep, start);
+    estimate(res, p, start);
+    res.frame = frameOf(d, p);
+    return res;
+  }
+
+  // ------------------------------------------------------------------ Hatching
+  function buildEdges(s, ca, sa) {
+    var e = { U1: [], V1: [], U2: [], V2: [], N: 0, vMin: Infinity, vMax: -Infinity };
+    for (var k = 0; k < s.polys.length; k++) {
+      var poly = s.polys[k];
+      for (var i = 0; i < poly.length; i++) {
+        var a = poly[i], b = poly[(i + 1) % poly.length];
+        var u1 = a.x * ca + a.y * sa, v1 = -a.x * sa + a.y * ca;
+        var u2 = b.x * ca + b.y * sa, v2 = -b.x * sa + b.y * ca;
+        if (v1 < e.vMin) e.vMin = v1; if (v1 > e.vMax) e.vMax = v1;
+        if (v2 < e.vMin) e.vMin = v2; if (v2 > e.vMax) e.vMax = v2;
+        if (v1 === v2) continue;
+        e.U1.push(u1); e.V1.push(v1); e.U2.push(u2); e.V2.push(v2);
+        e.N++;
+      }
+    }
+    return e;
+  }
+
+  function shapeIntervals(e, evenOdd, v, tmp) {
+    var out = [];
+    tmp.length = 0;
+    for (var i = 0; i < e.N; i++) {
+      var v1 = e.V1[i], v2 = e.V2[i];
+      if ((v1 <= v) !== (v2 <= v)) {
+        var x = e.U1[i] + (v - v1) * (e.U2[i] - e.U1[i]) / (v2 - v1);
+        tmp.push([x, v2 > v1 ? 1 : -1]);
+      }
+    }
+    if (tmp.length < 2) return out;
+    tmp.sort(function (a, b) { return a[0] - b[0]; });
+    var wind = 0, par = 0, startX = 0;
+    for (var j = 0; j < tmp.length; j++) {
+      var was = evenOdd ? (par & 1) === 1 : wind !== 0;
+      if (evenOdd) par++; else wind += tmp[j][1];
+      var now = evenOdd ? (par & 1) === 1 : wind !== 0;
+      if (!was && now) startX = tmp[j][0];
+      else if (was && !now) {
+        if (tmp[j][0] > startX) out.push([startX, tmp[j][0]]);
+      }
+    }
+    return out;
+  }
+
+  function unionInto(acc, add) {
+    if (add.length === 0) return;
+    if (acc.length === 0) { for (var i = 0; i < add.length; i++) acc.push([add[i][0], add[i][1]]); return; }
+    var all = acc.slice();
+    for (var k = 0; k < add.length; k++) all.push([add[k][0], add[k][1]]);
+    all.sort(function (a, b) { return a[0] - b[0]; });
+    acc.length = 0;
+    var cur = all[0];
+    for (var j = 1; j < all.length; j++) {
+      if (all[j][0] <= cur[1]) { if (all[j][1] > cur[1]) cur[1] = all[j][1]; }
+      else { acc.push(cur); cur = all[j]; }
+    }
+    acc.push(cur);
+  }
+
+  function subtractFrom(acc, sub) {
+    if (acc.length === 0 || sub.length === 0) return;
+    for (var i = 0; i < sub.length; i++) {
+      var s = sub[i], next = [];
+      for (var j = 0; j < acc.length; j++) {
+        var a = acc[j];
+        if (s[1] <= a[0] || s[0] >= a[1]) { next.push(a); continue; }
+        if (s[0] > a[0]) next.push([a[0], s[0]]);
+        if (s[1] < a[1]) next.push([s[1], a[1]]);
+      }
+      acc.length = 0;
+      for (var k = 0; k < next.length; k++) acc.push(next[k]);
+      if (acc.length === 0) return;
+    }
+  }
+
+  function hatchPass(shapes, angleDeg, spacing, inset, darkestOnly, output) {
+    var a = angleDeg * Math.PI / 180.0, ca = Math.cos(a), sa = Math.sin(a);
+    var n = shapes.length, ed = new Array(n);
+    var vmin = Infinity, vmax = -Infinity, any = false;
+    for (var i = 0; i < n; i++) {
+      ed[i] = buildEdges(shapes[i], ca, sa);
+      if (!shapes[i].erase && (!darkestOnly || shapes[i].step === 1)) {
+        any = true;
+        if (ed[i].vMin < vmin) vmin = ed[i].vMin;
+        if (ed[i].vMax > vmax) vmax = ed[i].vMax;
+      }
+    }
+    if (!any) return;
+    var kMin = Math.floor(vmin / spacing - 0.5), kMax = Math.ceil(vmax / spacing);
+    var tmp = [], acc = [];
+    var minLen = 2.0 * inset + 0.05;
+    for (var k = kMin; k <= kMax; k++) {
+      var v = (k + 0.5) * spacing;
+      acc.length = 0;
+      for (var si = 0; si < n; si++) {
+        var s = shapes[si], e = ed[si];
+        if (v < e.vMin || v > e.vMax) continue;
+        if (s.erase) {
+          if (acc.length === 0) continue;
+          subtractFrom(acc, shapeIntervals(e, s.evenOdd, v, tmp));
+        } else {
+          if (darkestOnly && s.step !== 1) continue;
+          var m = ((k % s.step) + s.step) % s.step;
+          if (m !== 0) continue;
+          unionInto(acc, shapeIntervals(e, s.evenOdd, v, tmp));
+        }
+      }
+      if (acc.length === 0) continue;
+      var reverse = (Math.abs(k) % 2) !== 0;
+      for (var j = 0; j < acc.length; j++) {
+        var seg = acc[reverse ? acc.length - 1 - j : j];
+        var ua = seg[0] + inset, ub = seg[1] - inset;
+        if (ub - ua < minLen - 2.0 * inset) continue;
+        if (ub <= ua) continue;
+        if (reverse) { var t = ua; ua = ub; ub = t; }
+        output.push([{ x: ua * ca - v * sa, y: ua * sa + v * ca }, { x: ub * ca - v * sa, y: ub * sa + v * ca }]);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ Ordering
+  function order(paths, start) {
+    var n = paths.length, outp = [];
+    if (n === 0) return outp;
+    var sx = new Array(n), sy = new Array(n), ex = new Array(n), ey = new Array(n), idx = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var p = paths[i];
+      sx[i] = p[0].x; sy[i] = p[0].y;
+      ex[i] = p[p.length - 1].x; ey[i] = p[p.length - 1].y;
+      idx[i] = i;
+    }
+    var remaining = n, cx = start.x, cy = start.y;
+    while (remaining > 0) {
+      var best = 0, bd = Infinity, brev = false;
+      for (var j = 0; j < remaining; j++) {
+        var q = idx[j];
+        var dxs = sx[q] - cx, dys = sy[q] - cy;
+        var ds = dxs * dxs + dys * dys;
+        var dxe = ex[q] - cx, dye = ey[q] - cy;
+        var de = dxe * dxe + dye * dye;
+        if (ds < bd) { bd = ds; best = j; brev = false; }
+        if (de < bd) { bd = de; best = j; brev = true; }
+        if (bd === 0) break;
+      }
+      var pi = idx[best];
+      idx[best] = idx[remaining - 1];
+      remaining--;
+      var pth = paths[pi];
+      if (brev) pth = pth.slice().reverse();
+      outp.push(pth);
+      cx = pth[pth.length - 1].x;
+      cy = pth[pth.length - 1].y;
+    }
+    return outp;
+  }
+
+  function moveTime(len, vMmPerS, acc) {
+    if (len <= 0) return 0;
+    var t = len / vMmPerS;
+    if (acc > 0) t += vMmPerS / acc;
+    return t;
+  }
+
+  /** Time for one pen lowering (Z move) in seconds. */
+  function zTime(zUp, zDown, fz, fland) {
+    var vz = Math.max(1, fz) / 60.0, vl = Math.max(1, fland) / 60.0;
+    var dz = Math.max(0.1, zUp - zDown), slow = Math.min(1.0, dz);
+    return dz / vz + (dz - slow) / vz + slow / vl;
+  }
+
+  function estimate(r, p, start) {
+    var vd = Math.max(1, p.fDraw) / 60.0, vt = Math.max(1, p.fTravel) / 60.0;
+    var zt = zTime(p.zUp, p.zDown, p.fZ, p.fLand);
+    var draw = 0, travel = 0, sec = 0, lifts = 0;
+    var cur = start, down = false;
+    for (var i = 0; i < r.paths.length; i++) {
+      var path = r.paths[i];
+      var d = dist(cur, path[0]);
+      if (!(down && d < JoinTol)) {
+        travel += d;
+        sec += moveTime(d, vt, p.accel);
+        sec += zt;
+        lifts++;
+        down = true;
+      }
+      var len = length(path);
+      draw += len;
+      sec += moveTime(len, vd, p.accel);
+      cur = path[path.length - 1];
+    }
+    r.drawLen = draw; r.travelLen = travel; r.seconds = sec; r.liftCount = lifts;
+  }
+
+  // ------------------------------------------------------------------ Cutting (drag knife)
+  function isClosed(p) { return p.length >= 4 && dist(p[0], p[p.length - 1]) < 1e-6; }
+  function polyArea(p) { var a = 0; for (var i = 0; i < p.length - 1; i++) a += p[i].x * p[i + 1].y - p[i + 1].x * p[i].y; return a / 2; }
+  function bbox(p) {
+    var b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (var i = 0; i < p.length; i++) {
+      if (p[i].x < b.x0) b.x0 = p[i].x; if (p[i].x > b.x1) b.x1 = p[i].x;
+      if (p[i].y < b.y0) b.y0 = p[i].y; if (p[i].y > b.y1) b.y1 = p[i].y;
+    }
+    return b;
+  }
+  function pip(pt, poly) {
+    var inside = false;
+    for (var i = 0, j = poly.length - 2; i < poly.length - 1; j = i++) {
+      var a = poly[i], b = poly[j];
+      if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < (b.x - a.x) * (pt.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  /** Closed contours start in the middle of their longest edge (never in a corner). */
+  function cutStarts(paths) {
+    var out = [];
+    for (var k = 0; k < paths.length; k++) {
+      var p = paths[k];
+      if (!isClosed(p)) { out.push(p); continue; }
+      var m = p.length - 1, bi = 0, bl = -1;
+      for (var i = 0; i < m; i++) { var l = dist(p[i], p[i + 1]); if (l > bl) { bl = l; bi = i; } }
+      var a = p[bi], b = p[bi + 1];
+      var S = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      var np = [S];
+      for (var q = 1; q <= m; q++) np.push(p[(bi + q) % m]);
+      np.push({ x: S.x, y: S.y });
+      out.push(np);
+    }
+    return out;
+  }
+  /** Inner contours first (holes before the outer edge), so the part stays held until the end. */
+  function orderCut(paths, start) {
+    var n = paths.length, depth = new Array(n), i, j;
+    for (i = 0; i < n; i++) depth[i] = 0;
+    var nClosed = 0;
+    for (i = 0; i < n; i++) if (isClosed(paths[i])) nClosed++;
+    if (nClosed > 0 && nClosed <= 800) {
+      var area = new Array(n), bb = new Array(n);
+      for (i = 0; i < n; i++) { area[i] = isClosed(paths[i]) ? Math.abs(polyArea(paths[i])) : 0; bb[i] = bbox(paths[i]); }
+      for (i = 0; i < n; i++) {
+        var pt = paths[i][0];
+        for (j = 0; j < n; j++) {
+          if (j === i || !isClosed(paths[j]) || area[j] <= area[i]) continue;
+          if (pt.x < bb[j].x0 || pt.x > bb[j].x1 || pt.y < bb[j].y0 || pt.y > bb[j].y1) continue;
+          if (pip(pt, paths[j])) depth[i]++;
+        }
+      }
+    }
+    var maxD = 0;
+    for (i = 0; i < n; i++) if (depth[i] > maxD) maxD = depth[i];
+    var res = [], cur = start;
+    for (var d = maxD; d >= 0; d--) {
+      var grp = [];
+      for (i = 0; i < n; i++) if (depth[i] === d) grp.push(paths[i]);
+      if (grp.length === 0) continue;
+      var o = order(grp, cur);
+      for (i = 0; i < o.length; i++) res.push(o[i]);
+      var lp = o[o.length - 1]; cur = lp[lp.length - 1];
+    }
+    return res;
+  }
+  /**
+   * Drag-knife compensation: the blade tip trails the swivel axis (the print head) by the offset r.
+   * The head therefore follows the path shifted forward by r; at corners above the threshold angle
+   * it swings around the corner in a small arc so the blade rotates. Closed contours
+   * get a lead-in on the edge and an overcut.
+   */
+  function knife(paths, p) {
+    var r = p.knife || 0;
+    if (!(r > 0.01)) return paths;
+    var thr = (p.cornerAng > 0 ? p.cornerAng : 25) * Math.PI / 180;
+    var over = Math.max(0, p.overcut || 0);
+    var out = [];
+    for (var i = 0; i < paths.length; i++) {
+      var src = paths[i], closed = isClosed(src), T = [];
+      for (var q = 0; q < src.length; q++) {
+        if (T.length === 0 || dist(T[T.length - 1], src[q]) > 1e-6) T.push({ x: src[q].x, y: src[q].y });
+        else if (closed && q === src.length - 1) T.push({ x: src[q].x, y: src[q].y });
+      }
+      if (T.length < 2) { out.push(src); continue; }
+      if (closed && T.length >= 4) {
+        var S0 = T[0], A = T[T.length - 2], B = T[1];
+        var el = dist(S0, B), ux = (B.x - S0.x) / el, uy = (B.y - S0.y) / el;
+        var lead = Math.min(Math.max(2 * r, 1.0), dist(A, S0) * 0.9);
+        var ov = Math.min(over, el * 0.9);
+        T.unshift({ x: S0.x - ux * lead, y: S0.y - uy * lead });
+        if (ov > 0.01) T.push({ x: S0.x + ux * ov, y: S0.y + uy * ov });
+      }
+      var n = T.length, d = [], k;
+      for (k = 0; k < n - 1; k++) {
+        var l = dist(T[k], T[k + 1]);
+        d.push({ x: (T[k + 1].x - T[k].x) / l, y: (T[k + 1].y - T[k].y) / l });
+      }
+      var o = [{ x: T[0].x, y: T[0].y }, { x: T[0].x + r * d[0].x, y: T[0].y + r * d[0].y }];
+      for (k = 1; k < n - 1; k++) {
+        var a = d[k - 1], b = d[k];
+        var cr = a.x * b.y - a.y * b.x, dt = a.x * b.x + a.y * b.y;
+        var ang = Math.atan2(Math.abs(cr), dt);
+        if (ang > thr) {
+          o.push({ x: T[k].x + r * a.x, y: T[k].y + r * a.y });
+          var th0 = Math.atan2(a.y, a.x), dth = Math.atan2(cr, dt);
+          var steps = Math.max(1, Math.ceil(Math.abs(dth) / (20 * Math.PI / 180)));
+          for (var s = 1; s <= steps; s++) {
+            var th = th0 + dth * s / steps;
+            o.push({ x: T[k].x + r * Math.cos(th), y: T[k].y + r * Math.sin(th) });
+          }
+        } else {
+          var vx = a.x + b.x, vy = a.y + b.y, vl = Math.hypot(vx, vy);
+          o.push({ x: T[k].x + r * vx / vl, y: T[k].y + r * vy / vl });
+        }
+      }
+      o.push({ x: T[n - 1].x + r * d[n - 2].x, y: T[n - 1].y + r * d[n - 2].y });
+      var oo = [];
+      for (k = 0; k < o.length; k++) if (oo.length === 0 || dist(oo[oo.length - 1], o[k]) > 1e-6) oo.push(o[k]);
+      out.push(oo);
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------------ G-Code
+  function f3(v) { return v.toFixed(3); }
+  function C(v) { if (v <= 0) v = 0; return f3(v); }
+  function Fd(v) { return String(Math.round(v)); }
+  function cl(v, max) { return v < 0 ? 0 : (v > max ? max : v); }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  // Paper/preview coordinates describe the PEN TIP. G-code describes the NOZZLE.
+  // Sebas X2D: nozzle = pen + (28, 35) mm, matching Desert Fox's compensation.
+  function toolheadOffsets(m) {
+    return {x: m.cut ? 0 : (m.toolX === undefined ? 0 : m.toolX),
+            y: m.cut ? 0 : (m.toolY === undefined ? 0 : m.toolY)};
+  }
+  function penBounds(m) {
+    var o = toolheadOffsets(m);
+    return {x0: Math.max(0, -o.x), y0: Math.max(0, -o.y),
+            x1: Math.min(m.bedX, m.bedX-o.x), y1: Math.min(m.bedY, m.bedY-o.y)};
+  }
+  function usablePaper(p, m) {
+    var b = penBounds(m), margin = p.margin;
+    var a = {x0: Math.max(p.paperX+margin, b.x0), y0: Math.max(p.paperY+margin, b.y0),
+             x1: Math.min(p.paperX+p.paperW-margin, b.x1), y1: Math.min(p.paperY+p.paperH-margin, b.y1)};
+    a.width = Math.max(0, a.x1-a.x0); a.height = Math.max(0, a.y1-a.y0);
+    a.cx = (a.x0+a.x1)/2; a.cy = (a.y0+a.y1)/2;
+    return a;
+  }
+  function fitPlacement(d, p, m) {
+    var a = usablePaper(p,m);
+    if (a.width <= 0.1 || a.height <= 0.1) return null;
+    // Match Placement's actual geometry bounds, including rotation. Leave 0.05 mm
+    // per edge for display rounding, plus room for contour/thickness expansion.
+    var gap = 0.05 + Math.max(0,p.thick || 0) + ((p.thick || 0)>0 ? 0.35 : 0);
+    var aw = a.width-2*gap, ah = a.height-2*gap;
+    if (aw <= 0 || ah <= 0) return null;
+    var ratio = (d.maxY-d.minY)/(d.maxX-d.minX);
+    var r=p.rot*Math.PI/180, c=Math.abs(Math.cos(r)), sn=Math.abs(Math.sin(r));
+    var width=Math.floor(Math.min(aw/(c+ratio*sn), ah/(sn+ratio*c))*10)/10;
+    if (!(width>=1)) return null;
+    return {width:width, offU:a.cx-(p.paperX+p.paperW/2), offV:a.cy-(p.paperY+p.paperH/2), area:a};
+  }
+  function toolheadError(paths, m) {
+    var o = toolheadOffsets(m), b=penBounds(m);
+    if (!Number.isFinite(o.x) || !Number.isFinite(o.y)) return "Toolhead compensation must contain finite numbers.";
+    if (!o.x && !o.y) return null;
+    var xmin=Infinity,ymin=Infinity,xmax=-Infinity,ymax=-Infinity;
+    for (var i=0;i<paths.length;i++) for (var j=0;j<paths[i].length;j++) {
+      var p=paths[i][j];
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return "Drawing coordinates must contain finite numbers.";
+      xmin=Math.min(xmin,p.x);xmax=Math.max(xmax,p.x);ymin=Math.min(ymin,p.y);ymax=Math.max(ymax,p.y);
+    }
+    // Validate emitted (three-decimal) coordinates, avoiding false errors from
+    // floating-point noise exactly on a limit.
+    var excess=[b.x0-xmin,xmax-b.x1,b.y0-ymin,ymax-b.y1];
+    if (Math.max.apply(Math,excess)<=0.00049) return null;
+    var labels=["left","right","front","back"], details=[];
+    for (var k=0;k<4;k++) if(excess[k]>0.00049) details.push(labels[k]+": "+excess[k].toFixed(2)+" mm");
+    return "Drawing outside the reachable pen area ("+details.join(", ")+").\n"+
+      "Allowed pen X: "+b.x0.toFixed(2)+" to "+b.x1.toFixed(2)+" mm; Y: "+b.y0.toFixed(2)+" to "+b.y1.toFixed(2)+" mm.\n"+
+      "Use Fit to usable area to resize and position the complete drawing inside the paper margins and reachable area. Paper position will stay unchanged.";
+  }
+  function gcodeWrite(paths, m, label, version) {
+    var boundsError = toolheadError(paths, m);
+    if (boundsError) throw new Error(boundsError);
+    var tool = toolheadOffsets(m);
+    var slow = Math.min(1.0, m.zUp - m.zDown);
+    var g = [];
+    var now = new Date();
+    var TL = m.cut ? "blade" : "pen", TH = m.cut ? "blade holder" : "pen holder";
+    g.push("; Stiftplotter " + version + (m.cut ? " CUTTING (drag knife)" : "") + " G-Code - " + label);
+    g.push("; Generated on " + now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()) + " " + pad2(now.getHours()) + ":" + pad2(now.getMinutes()));
+    g.push("; Paths: " + paths.length);
+    g.push("; Toolhead compensation: nozzle X = pen X + " + f3(tool.x) + "; nozzle Y = pen Y + " + f3(tool.y) + " mm");
+    g.push("; Z up " + f3(m.zUp) + " / Z down " + f3(m.zDown) + (m.cut ? " / Cut F" : " / Draw F") + Fd(m.fDraw) + " / Acceleration " + Fd(m.accel));
+    g.push("; NO extrusion, heaters stay off");
+    g.push("G21 ; mm");
+    g.push("G90 ; absolute");
+    if (m.home && m.pause) {
+      g.push("; PART 2 - no G28: the printer must already be homed by Part 1, the " + TH + " is mounted.");
+      g.push("; Starts at the tool-change height of Part 1, then Z moves to '" + TL + " up', only then does the XY movement begin.");
+    } else if (m.home) {
+      g.push("G28 ; Homing");
+    }
+    if (m.accel > 0) g.push("M204 S" + Fd(m.accel) + " ; acceleration");
+    g.push("G1 Z" + f3(m.zUp) + " F" + Fd(m.fZ) + " ; " + TL + " up");
+
+    var down = false, cx = -1e9, cy = -1e9;
+    for (var i = 0; i < paths.length; i++) {
+      var p = paths[i];
+      var x0 = cl(p[0].x, m.bedX), y0 = cl(p[0].y, m.bedY);
+      var joined = down && Math.abs(x0 - cx) < JoinTol && Math.abs(y0 - cy) < JoinTol;
+      if (!joined) {
+        if (down) g.push("G1 Z" + f3(m.zUp) + " F" + Fd(m.fZ));
+        g.push("G1 X" + C(x0 + tool.x) + " Y" + C(y0 + tool.y) + " F" + Fd(m.fTravel));
+        if (m.zUp - m.zDown > slow + 0.001) g.push("G1 Z" + f3(m.zDown + slow) + " F" + Fd(m.fZ));
+        g.push("G1 Z" + f3(m.zDown) + " F" + Fd(m.fLand) + " ; langsam absetzen");
+        down = true;
+      }
+      for (var k = 1; k < p.length; k++) {
+        cx = cl(p[k].x, m.bedX); cy = cl(p[k].y, m.bedY);
+        g.push("G1 X" + C(cx + tool.x) + " Y" + C(cy + tool.y) + " F" + Fd(m.fDraw));
+      }
+    }
+    if (down) g.push("G1 Z" + f3(m.zUp) + " F" + Fd(m.fZ));
+    g.push("G1 Z" + f3(m.zUp + 10) + " F" + Fd(m.fZ));
+    g.push("G1 X" + C(m.bedX / 2) + " Y" + C(m.bedY - 10) + " F" + Fd(m.fTravel) + " ; parken");
+    g.push("M400 ; wait until finished");
+    return g.join("\n") + "\n";
+  }
+
+  /** Part 1: homing only, then the bed moves 50 mm further down (no M84). */
+  function gcodeHoming(m, label, version) {
+    var now = new Date();
+    var g = [];
+    var TH = m.cut ? "blade holder" : "pen holder";
+    g.push("; Stiftplotter " + version + " PART 1 (homing only) - " + label);
+    g.push("; Generated on " + now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()) + " " + pad2(now.getHours()) + ":" + pad2(now.getMinutes()));
+    g.push("; Then attach the " + TH + " and start Part 2.");
+    g.push("G21 ; mm");
+    g.push("G90 ; absolute");
+    g.push("G28 ; Homing");
+    g.push("G1 Z" + f3(m.zDown + 50) + " F" + Fd(m.fZ) + " ; bed 50 mm further down: room for the " + TH);
+    g.push("M400 ; wait until finished");
+    return g.join("\n") + "\n";
+  }
+
+  return {
+    JoinTol: JoinTol, build: build, gcodeWrite: gcodeWrite, gcodeHoming: gcodeHoming, toolheadError: toolheadError, penBounds: penBounds, usablePaper: usablePaper, fitPlacement: fitPlacement,
+    moveTime: moveTime, zTime: zTime, dist: dist, length: length
+  };
+})();
+if (typeof module !== "undefined") module.exports = Engine;
+</script>
+<script>
+/* SVG reader: converts an SVG file into shapes with contours (polylines). */
+var SvgLoader = (function () {
+  var SKIP = {};
+  ["defs", "clippath", "mask", "symbol", "marker", "pattern", "style", "title", "desc", "metadata",
+   "lineargradient", "radialgradient", "filter", "script", "font", "font-face", "namedview", "foreignobject"]
+    .forEach(function (n) { SKIP[n] = true; });
+
+  function Mat(a, b, c, d, e, f) { this.a = a; this.b = b; this.c = c; this.d = d; this.e = e; this.f = f; }
+  Mat.identity = function () { return new Mat(1, 0, 0, 1, 0, 0); };
+  Mat.mul = function (m1, m2) {
+    return new Mat(m1.a * m2.a + m1.c * m2.b, m1.b * m2.a + m1.d * m2.b,
+                   m1.a * m2.c + m1.c * m2.d, m1.b * m2.c + m1.d * m2.d,
+                   m1.a * m2.e + m1.c * m2.f + m1.e, m1.b * m2.e + m1.d * m2.f + m1.f);
+  };
+  Mat.prototype.apply = function (x, y) { return { x: this.a * x + this.c * y + this.e, y: this.b * x + this.d * y + this.f }; };
+
+  function PathBuilder(mat, shape) { this.m = mat; this.shape = shape; this.cur = null; }
+  PathBuilder.prototype.moveTo = function (x, y) {
+    this.cur = { pts: [this.m.apply(x, y)], cubic: [], c1: [], c2: [], closed: false };
+    this.shape.subs.push(this.cur);
+  };
+  PathBuilder.prototype.lineTo = function (x, y) {
+    if (this.cur === null) this.moveTo(x, y);
+    this.cur.pts.push(this.m.apply(x, y)); this.cur.cubic.push(false); this.cur.c1.push({ x: 0, y: 0 }); this.cur.c2.push({ x: 0, y: 0 });
+  };
+  PathBuilder.prototype.cubicTo = function (x1, y1, x2, y2, x, y) {
+    if (this.cur === null) this.moveTo(x1, y1);
+    this.cur.pts.push(this.m.apply(x, y)); this.cur.cubic.push(true); this.cur.c1.push(this.m.apply(x1, y1)); this.cur.c2.push(this.m.apply(x2, y2));
+  };
+  PathBuilder.prototype.close = function () { if (this.cur !== null) this.cur.closed = true; this.cur = null; };
+
+  function pdist(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+
+  // ---- Path reader
+  function PathReader(text) { this.s = text; this.i = 0; }
+  PathReader.prototype.skipSep = function () {
+    while (this.i < this.s.length && (/\s/.test(this.s[this.i]) || this.s[this.i] === ",")) this.i++;
+  };
+  PathReader.prototype.atEnd = function () { this.skipSep(); return this.i >= this.s.length; };
+  PathReader.prototype.tryCommand = function () {
+    this.skipSep();
+    if (this.i >= this.s.length) return null;
+    var ch = this.s[this.i];
+    if ("MmLlHhVvCcSsQqTtAaZz".indexOf(ch) >= 0) { this.i++; return ch; }
+    return null;
+  };
+  PathReader.prototype.hasNumber = function () {
+    this.skipSep();
+    if (this.i >= this.s.length) return false;
+    var ch = this.s[this.i];
+    return (ch >= "0" && ch <= "9") || ch === "-" || ch === "+" || ch === ".";
+  };
+  function isDigit(ch) { return ch !== undefined && ch >= "0" && ch <= "9"; }
+  PathReader.prototype.tryNumber = function () {
+    this.skipSep();
+    var s = this.s, st = this.i, i = this.i;
+    if (i < s.length && (s[i] === "+" || s[i] === "-")) i++;
+    var digits = false;
+    while (i < s.length && isDigit(s[i])) { i++; digits = true; }
+    if (i < s.length && s[i] === ".") {
+      i++;
+      while (i < s.length && isDigit(s[i])) { i++; digits = true; }
+    }
+    if (!digits) { this.i = st; return null; }
+    if (i < s.length && (s[i] === "e" || s[i] === "E")) {
+      var save = i;
+      i++;
+      if (i < s.length && (s[i] === "+" || s[i] === "-")) i++;
+      if (i < s.length && isDigit(s[i])) { while (i < s.length && isDigit(s[i])) i++; }
+      else i = save;
+    }
+    this.i = i;
+    return parseFloat(s.substring(st, i));
+  };
+  PathReader.prototype.num = function () {
+    var v = this.tryNumber();
+    if (v === null) throw new Error("Number expected at position " + this.i);
+    return v;
+  };
+  PathReader.prototype.flag = function () {
+    this.skipSep();
+    if (this.i < this.s.length && (this.s[this.i] === "0" || this.s[this.i] === "1")) { var f = this.s[this.i] === "1"; this.i++; return f; }
+    throw new Error("Arc flag (0/1) expected at position " + this.i);
+  };
+
+  function numbers(s) {
+    var r = [];
+    if (!s) return r;
+    var pr = new PathReader(s), v;
+    while ((v = pr.tryNumber()) !== null) r.push(v);
+    return r;
+  }
+
+  // ---- Paths
+  function parsePath(d, pb) {
+    if (!d) return;
+    var r = new PathReader(d);
+    var cx = 0, cy = 0, sx = 0, sy = 0, lcx = 0, lcy = 0;
+    var prev = " ", cmd = " ", open = false;
+    while (true) {
+      if (r.atEnd()) break;
+      var c = r.tryCommand();
+      if (c !== null) cmd = c;
+      else if (cmd === " ") throw new Error("Number without a preceding path command");
+      else if (!r.hasNumber()) throw new Error("Unexpected character in path");
+      var rel = cmd === cmd.toLowerCase() && cmd !== cmd.toUpperCase();
+      var C = cmd.toUpperCase();
+      var ox = rel ? cx : 0, oy = rel ? cy : 0;
+      var x, y, x1, y1, x2, y2, qx, qy;
+      if (C === "M") {
+        x = r.num() + ox; y = r.num() + oy;
+        pb.moveTo(x, y); open = true;
+        cx = sx = x; cy = sy = y;
+        cmd = rel ? "l" : "L";
+        prev = "M";
+        continue;
+      }
+      if (C === "Z") {
+        if (open) pb.close();
+        open = false;
+        cx = sx; cy = sy; prev = "Z";
+        cmd = " ";
+        continue;
+      }
+      if (!open) { pb.moveTo(cx, cy); open = true; sx = cx; sy = cy; }
+      switch (C) {
+        case "L": x = r.num() + ox; y = r.num() + oy; pb.lineTo(x, y); cx = x; cy = y; break;
+        case "H": x = r.num() + ox; pb.lineTo(x, cy); cx = x; break;
+        case "V": y = r.num() + oy; pb.lineTo(cx, y); cy = y; break;
+        case "C":
+          x1 = r.num() + ox; y1 = r.num() + oy; x2 = r.num() + ox; y2 = r.num() + oy; x = r.num() + ox; y = r.num() + oy;
+          pb.cubicTo(x1, y1, x2, y2, x, y); lcx = x2; lcy = y2; cx = x; cy = y;
+          break;
+        case "S":
+          x1 = cx; y1 = cy;
+          if (prev === "C" || prev === "S") { x1 = 2 * cx - lcx; y1 = 2 * cy - lcy; }
+          x2 = r.num() + ox; y2 = r.num() + oy; x = r.num() + ox; y = r.num() + oy;
+          pb.cubicTo(x1, y1, x2, y2, x, y); lcx = x2; lcy = y2; cx = x; cy = y;
+          break;
+        case "Q":
+          qx = r.num() + ox; qy = r.num() + oy; x = r.num() + ox; y = r.num() + oy;
+          pb.cubicTo(cx + 2.0 / 3 * (qx - cx), cy + 2.0 / 3 * (qy - cy), x + 2.0 / 3 * (qx - x), y + 2.0 / 3 * (qy - y), x, y);
+          lcx = qx; lcy = qy; cx = x; cy = y;
+          break;
+        case "T":
+          qx = cx; qy = cy;
+          if (prev === "Q" || prev === "T") { qx = 2 * cx - lcx; qy = 2 * cy - lcy; }
+          x = r.num() + ox; y = r.num() + oy;
+          pb.cubicTo(cx + 2.0 / 3 * (qx - cx), cy + 2.0 / 3 * (qy - cy), x + 2.0 / 3 * (qx - x), y + 2.0 / 3 * (qy - y), x, y);
+          lcx = qx; lcy = qy; cx = x; cy = y;
+          break;
+        case "A": {
+          var rx = r.num(), ry = r.num(), phi = r.num();
+          var fa = r.flag(), fs = r.flag();
+          x = r.num() + ox; y = r.num() + oy;
+          arcTo(pb, cx, cy, rx, ry, phi, fa, fs, x, y);
+          cx = x; cy = y;
+          break;
+        }
+        default:
+          throw new Error("Unknown path command '" + cmd + "'");
+      }
+      prev = C;
+    }
+  }
+
+  function angle(ux, uy, vx, vy) { return Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy); }
+  function ellPt(cx, cy, rx, ry, cp, sp, ux, uy) {
+    var ex = rx * ux, ey = ry * uy;
+    return { x: cp * ex - sp * ey + cx, y: sp * ex + cp * ey + cy };
+  }
+
+  function arcTo(pb, x1, y1, rx, ry, phiDeg, fa, fs, x2, y2) {
+    if (x1 === x2 && y1 === y2) return;
+    rx = Math.abs(rx); ry = Math.abs(ry);
+    if (rx === 0 || ry === 0) { pb.lineTo(x2, y2); return; }
+    var phi = phiDeg * Math.PI / 180, cp = Math.cos(phi), sp = Math.sin(phi);
+    var dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+    var x1p = cp * dx + sp * dy, y1p = -sp * dx + cp * dy;
+    var lam = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry);
+    if (lam > 1) { var s = Math.sqrt(lam); rx *= s; ry *= s; }
+    var num = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p;
+    var den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+    var co = den === 0 ? 0 : Math.sqrt(Math.max(0, num / den));
+    if (fa === fs) co = -co;
+    var cxp = co * rx * y1p / ry, cyp = -co * ry * x1p / rx;
+    var ccx = cp * cxp - sp * cyp + (x1 + x2) / 2, ccy = sp * cxp + cp * cyp + (y1 + y2) / 2;
+    var th1 = angle(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+    var dth = angle((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+    if (!fs && dth > 0) dth -= 2 * Math.PI;
+    else if (fs && dth < 0) dth += 2 * Math.PI;
+    var segs = Math.ceil(Math.abs(dth) / (Math.PI / 2) - 1e-9);
+    if (segs < 1) segs = 1;
+    var delta = dth / segs;
+    var kk = 4.0 / 3.0 * Math.tan(delta / 4);
+    var t = th1;
+    for (var i = 0; i < segs; i++) {
+      var c1 = Math.cos(t), s1 = Math.sin(t), c2 = Math.cos(t + delta), s2 = Math.sin(t + delta);
+      var ex1 = c1 - kk * s1, ey1 = s1 + kk * c1;
+      var ex2 = c2 + kk * s2, ey2 = s2 - kk * c2;
+      var p1 = ellPt(ccx, ccy, rx, ry, cp, sp, ex1, ey1);
+      var p2 = ellPt(ccx, ccy, rx, ry, cp, sp, ex2, ey2);
+      var p = ellPt(ccx, ccy, rx, ry, cp, sp, c2, s2);
+      if (i === segs - 1) { p = { x: x2, y: y2 }; }
+      pb.cubicTo(p1.x, p1.y, p2.x, p2.y, p.x, p.y);
+      t += delta;
+    }
+  }
+
+  // ---- Basic shapes
+  function attr(el, name) { var v = el.getAttribute(name); return v === null ? "" : v; }
+
+  function len(el, name) {
+    var s = attr(el, name);
+    if (!s) return 0;
+    var t = s.trim();
+    var mt = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/.exec(t);
+    if (!mt) return 0;
+    if (t.charAt(t.length - 1) === "%") return 0;
+    return parseFloat(mt[0]);
+  }
+
+  function buildEllipse(pb, cx, cy, rx, ry) {
+    if (rx <= 0 || ry <= 0) return;
+    var k = 0.5522847498307936;
+    pb.moveTo(cx + rx, cy);
+    pb.cubicTo(cx + rx, cy + k * ry, cx + k * rx, cy + ry, cx, cy + ry);
+    pb.cubicTo(cx - k * rx, cy + ry, cx - rx, cy + k * ry, cx - rx, cy);
+    pb.cubicTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry);
+    pb.cubicTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy);
+    pb.close();
+  }
+
+  function buildRect(el, pb) {
+    var x = len(el, "x"), y = len(el, "y"), w = len(el, "width"), h = len(el, "height");
+    if (w <= 0 || h <= 0) return;
+    var hasRx = attr(el, "rx") !== "", hasRy = attr(el, "ry") !== "";
+    var rx = len(el, "rx"), ry = len(el, "ry");
+    if (hasRx && !hasRy) ry = rx;
+    if (hasRy && !hasRx) rx = ry;
+    rx = Math.min(Math.max(rx, 0), w / 2); ry = Math.min(Math.max(ry, 0), h / 2);
+    if (rx <= 0 || ry <= 0) {
+      pb.moveTo(x, y); pb.lineTo(x + w, y); pb.lineTo(x + w, y + h); pb.lineTo(x, y + h); pb.close();
+      return;
+    }
+    var k = 0.5522847498307936;
+    pb.moveTo(x + rx, y);
+    pb.lineTo(x + w - rx, y);
+    pb.cubicTo(x + w - rx + k * rx, y, x + w, y + ry - k * ry, x + w, y + ry);
+    pb.lineTo(x + w, y + h - ry);
+    pb.cubicTo(x + w, y + h - ry + k * ry, x + w - rx + k * rx, y + h, x + w - rx, y + h);
+    pb.lineTo(x + rx, y + h);
+    pb.cubicTo(x + rx - k * rx, y + h, x, y + h - ry + k * ry, x, y + h - ry);
+    pb.lineTo(x, y + ry);
+    pb.cubicTo(x, y + ry - k * ry, x + rx - k * rx, y, x + rx, y);
+    pb.close();
+  }
+
+  function parseTransform(s) {
+    var m = Mat.identity();
+    if (!s) return m;
+    var re = /([a-zA-Z]+)\s*\(([^)]*)\)/g, mt;
+    while ((mt = re.exec(s)) !== null) {
+      var f = mt[1], a = numbers(mt[2]), t = Mat.identity();
+      switch (f) {
+        case "matrix": if (a.length >= 6) t = new Mat(a[0], a[1], a[2], a[3], a[4], a[5]); break;
+        case "translate": if (a.length >= 1) t = new Mat(1, 0, 0, 1, a[0], a.length > 1 ? a[1] : 0); break;
+        case "scale": if (a.length >= 1) t = new Mat(a[0], 0, 0, a.length > 1 ? a[1] : a[0], 0, 0); break;
+        case "rotate":
+          if (a.length >= 1) {
+            var r = a[0] * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+            t = new Mat(c, sn, -sn, c, 0, 0);
+            if (a.length >= 3) t = Mat.mul(Mat.mul(new Mat(1, 0, 0, 1, a[1], a[2]), t), new Mat(1, 0, 0, 1, -a[1], -a[2]));
+          }
+          break;
+        case "skewX": if (a.length >= 1) t = new Mat(1, 0, Math.tan(a[0] * Math.PI / 180), 1, 0, 0); break;
+        case "skewY": if (a.length >= 1) t = new Mat(1, Math.tan(a[0] * Math.PI / 180), 0, 1, 0, 0); break;
+      }
+      m = Mat.mul(m, t);
+    }
+    return m;
+  }
+
+  // ---- CSS and style
+  function parseStyle(s) {
+    var d = {};
+    if (!s) return d;
+    s.split(";").forEach(function (part) {
+      var i = part.indexOf(":");
+      if (i <= 0) return;
+      var k = part.substring(0, i).trim().toLowerCase();
+      var v = part.substring(i + 1).trim();
+      if (/!important$/.test(v)) v = v.substring(0, v.length - 10).trim();
+      d[k] = v;
+    });
+    return d;
+  }
+
+  function parseCss(text, css) {
+    if (!text) return;
+    text = text.replace(/\/\*[\s\S]*?\*\//g, "");
+    var re = /([^{}]+)\{([^}]*)\}/g, mt;
+    while ((mt = re.exec(text)) !== null) {
+      var props = parseStyle(mt[2]);
+      mt[1].split(",").forEach(function (selRaw) {
+        var sel = selRaw.trim();
+        if (sel.charAt(0) === "." && !/[ >:\[]/.test(sel)) {
+          var cls = sel.substring(1);
+          if (!css[cls]) css[cls] = {};
+          for (var k in props) css[cls][k] = props[k];
+        }
+      });
+    }
+  }
+
+  var PAINT_ATTRS = ["fill", "fill-rule", "stroke", "fill-opacity", "stroke-opacity", "display", "visibility"];
+
+  function isZero(s) {
+    var t = s.trim();
+    if (t.charAt(t.length - 1) === "%") t = t.substring(0, t.length - 1);
+    var v = Number(t);
+    return t !== "" && !isNaN(v) && v === 0;
+  }
+
+  /** Reads a colour. Returns null = no colour (none/transparent); light = (almost) white; lum 0..1. */
+  function parsePaint(v) {
+    if (!v) return null;
+    var f = v.trim().toLowerCase();
+    if (f === "none" || f === "transparent" || f === "") return null;
+    if (f.indexOf("url(") === 0) return { lum: 0.5, light: false };
+    if (f === "currentcolor" || f === "inherit") return { lum: 0, light: false };
+    var r = 0, g = 0, b = 0, ok = false;
+    if (f.charAt(0) === "#") {
+      var h = f.substring(1);
+      if (h.length === 3 || h.length === 4) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      if (h.length >= 6 && /^[0-9a-f]{6}/.test(h)) {
+        r = parseInt(h.substr(0, 2), 16); g = parseInt(h.substr(2, 2), 16); b = parseInt(h.substr(4, 2), 16);
+        ok = true;
+      }
+    } else if (f.indexOf("rgb") === 0) {
+      var mt = /\(([^)]*)\)/.exec(f);
+      if (mt) {
+        var parts = mt[1].split(/[,\s\/]+/).filter(function (x) { return x !== ""; });
+        if (parts.length >= 3) {
+          var vv = [];
+          ok = true;
+          for (var i = 0; i < 3; i++) {
+            var q = parts[i].trim(), pct = q.charAt(q.length - 1) === "%";
+            if (pct) q = q.substring(0, q.length - 1);
+            var d = Number(q);
+            if (q === "" || isNaN(d)) { ok = false; break; }
+            vv.push(Math.round(pct ? d * 2.55 : d));
+          }
+          if (ok) { r = vv[0]; g = vv[1]; b = vv[2]; }
+        }
+      }
+    } else {
+      var named = {
+        black: [0, 0, 0], white: [255, 255, 255], gray: [128, 128, 128], grey: [128, 128, 128], silver: [192, 192, 192],
+        lightgray: [211, 211, 211], lightgrey: [211, 211, 211], darkgray: [169, 169, 169], darkgrey: [169, 169, 169],
+        dimgray: [105, 105, 105], dimgrey: [105, 105, 105], red: [255, 0, 0], green: [0, 128, 0], blue: [0, 0, 255],
+        yellow: [255, 255, 0], orange: [255, 165, 0], ivory: [250, 250, 250], snow: [250, 250, 250],
+        whitesmoke: [250, 250, 250], ghostwhite: [250, 250, 250]
+      };
+      if (named[f]) { r = named[f][0]; g = named[f][1]; b = named[f][2]; ok = true; }
+    }
+    if (!ok) return { lum: 0, light: false };      // unknown colour: treat as black
+    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+    if (lum < 0) lum = 0; if (lum > 1) lum = 1;
+    return { lum: lum, light: (r >= 230 && g >= 230 && b >= 230) };
+  }
+
+  function addWarning(des, w) { if (des.warnings.indexOf(w) < 0) des.warnings.push(w); }
+
+  function walk(el, parent, inh, css, raw, des, isRoot) {
+    var name = el.localName;
+    if (SKIP[name.toLowerCase()]) return;
+    if (name === "text" || name === "tspan" || name === "textPath") {
+      addWarning(des, "Text elements are not supported. Please convert text to paths first (e.g. Inkscape: Path > Object to Path).");
+      return;
+    }
+    if (name === "image") {
+      addWarning(des, "Embedded images (raster graphics) are ignored. Only vector shapes are used.");
+      return;
+    }
+    if (name === "use") {
+      addWarning(des, "<use> references are not supported and are ignored.");
+      return;
+    }
+
+    var st = {};
+    for (var k0 in inh) st[k0] = inh[k0];
+    PAINT_ATTRS.forEach(function (a) {
+      var v = attr(el, a);
+      if (v) st[a] = v.trim();
+    });
+    var cls = attr(el, "class");
+    if (cls) cls.split(/[ \t]+/).forEach(function (c) {
+      if (c && css[c]) for (var kk in css[c]) st[kk] = css[c][kk];
+    });
+    var inl = parseStyle(attr(el, "style"));
+    for (var k1 in inl) st[k1] = inl[k1];
+
+    if (st["display"] !== undefined && st["display"].trim().toLowerCase() === "none") return;
+    delete st["display"];
+    var op = attr(el, "opacity");
+    if (op && isZero(op)) return;
+
+    var m = Mat.mul(parent, parseTransform(attr(el, "transform")));
+    if (name === "svg" && !isRoot) m = Mat.mul(m, new Mat(1, 0, 0, 1, len(el, "x"), len(el, "y")));
+
+    var shape = { subs: [], evenOdd: false, fill: 0, lum: 0, stroke: false };
+    var vis = st["visibility"];
+    var hidden = vis !== undefined && (vis.trim().toLowerCase() === "hidden" || vis.trim().toLowerCase() === "collapse");
+    var fr = st["fill-rule"];
+    shape.evenOdd = fr !== undefined && fr.trim().toLowerCase() === "evenodd";
+
+    var fp = parsePaint(st["fill"]);
+    if (!hidden && fp !== null && !(st["fill-opacity"] !== undefined && isZero(st["fill-opacity"]))) {
+      shape.fill = fp.light ? 2 : 1;
+      shape.lum = fp.lum;
+      if (st["fill"] !== undefined && st["fill"].trim().toLowerCase().indexOf("url(") === 0)
+        addWarning(des, "Gradient/pattern fills are treated as medium grey.");
+    }
+    var sp = parsePaint(st["stroke"]);
+    if (!hidden && sp !== null && !sp.light && !(st["stroke-opacity"] !== undefined && isZero(st["stroke-opacity"])))
+      shape.stroke = true;
+    if (name === "line") shape.fill = 0;
+
+    var pb = new PathBuilder(m, shape);
+    var isShape = true;
+    try {
+      switch (name) {
+        case "path": parsePath(attr(el, "d"), pb); break;
+        case "rect": buildRect(el, pb); break;
+        case "circle": { var r = len(el, "r"); buildEllipse(pb, len(el, "cx"), len(el, "cy"), r, r); } break;
+        case "ellipse": buildEllipse(pb, len(el, "cx"), len(el, "cy"), len(el, "rx"), len(el, "ry")); break;
+        case "line":
+          pb.moveTo(len(el, "x1"), len(el, "y1"));
+          pb.lineTo(len(el, "x2"), len(el, "y2"));
+          break;
+        case "polygon":
+        case "polyline": {
+          var nums = numbers(attr(el, "points"));
+          for (var i = 0; i + 1 < nums.length; i += 2) {
+            if (i === 0) pb.moveTo(nums[i], nums[i + 1]); else pb.lineTo(nums[i], nums[i + 1]);
+          }
+          if (name === "polygon") pb.close();
+        } break;
+        default: isShape = false; break;
+      }
+    } catch (ex) {
+      addWarning(des, "An element <" + name + "> could not be read and is ignored (" + ex.message + ").");
+      shape.subs = [];
+    }
+    if (isShape) {
+      if (shape.subs.length > 0) raw.push(shape);
+      return;
+    }
+    for (var ci = 0; ci < el.children.length; ci++) walk(el.children[ci], m, st, css, raw, des, false);
+  }
+
+  /** text = contents of the SVG file. Throws Error with a user-facing message. */
+  function load(text) {
+    var doc = new DOMParser().parseFromString(text, "image/svg+xml");
+    if (doc.getElementsByTagName("parsererror").length > 0)
+      throw new Error("The file is not a valid SVG file (XML error).");
+    var root = doc.documentElement;
+    if (!root || root.localName !== "svg") throw new Error("The file is not a valid SVG file (no <svg> element).");
+
+    var css = {};
+    var all = doc.getElementsByTagName("*");
+    for (var i = 0; i < all.length; i++) if (all[i].localName === "style") parseCss(all[i].textContent, css);
+
+    var raw = [];
+    var des = { shapes: [], minX: 0, minY: 0, maxX: 0, maxY: 0, warnings: [], pointCount: 0, fillCount: 0, strokeCount: 0, eraseCount: 0 };
+    walk(root, Mat.identity(), { "fill": "black", "fill-rule": "nonzero", "stroke": "none" }, css, raw, des, true);
+
+    var use = raw.filter(function (s) { return s.subs.length > 0 && (s.fill === 1 || s.stroke); });
+    if (use.length === 0) {
+      raw.forEach(function (s) { if (s.subs.length > 0 && s.fill === 0 && !s.stroke) { s.stroke = true; use.push(s); } });
+      if (use.length > 0) des.warnings.push("None of the shapes has a fill or a stroke. They will be drawn as lines.");
+    }
+    if (use.length === 0)
+      throw new Error("Nothing drawable was found in the SVG file.\nPaths, rectangles, circles, ellipses, lines, polygons and polylines with a black/grey fill or a visible stroke are used. Pure white shapes are not drawn.");
+
+    var anyDarkFill = use.some(function (s) { return s.fill === 1; });
+    var useSet = new Set(use);
+    raw.forEach(function (s) { if (s.subs.length > 0 && s.fill === 2 && anyDarkFill) useSet.add(s); });
+    use = raw.filter(function (s) { return useSet.has(s); });
+
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    use.forEach(function (s) { s.subs.forEach(function (sub) { sub.pts.forEach(function (p) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }); }); });
+    var diag = Math.sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY));
+    if (!(diag > 0)) throw new Error("The design has no extent.");
+    var segLen = diag / 2000.0, eps = diag * 1e-9;
+
+    des.minX = des.minY = Infinity; des.maxX = des.maxY = -Infinity;
+    use.forEach(function (s) {
+      var o = { contours: [], evenOdd: s.evenOdd, fill: s.fill, lum: s.lum, stroke: s.stroke };
+      var counts = (s.fill === 1 || s.stroke);
+      s.subs.forEach(function (sub) {
+        var pts = [sub.pts[0]];
+        for (var i = 0; i < sub.cubic.length; i++) {
+          var p0 = sub.pts[i], p3 = sub.pts[i + 1];
+          if (!sub.cubic[i]) { pts.push(p3); continue; }
+          var c1 = sub.c1[i], c2 = sub.c2[i];
+          var l = pdist(p0, c1) + pdist(c1, c2) + pdist(c2, p3);
+          var n = Math.ceil(l / segLen);
+          if (n < 4) n = 4;
+          if (n > 300) n = 300;
+          for (var k = 1; k <= n; k++) {
+            var t = k / n, mt = 1 - t;
+            var a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
+            pts.push({ x: a * p0.x + b * c1.x + c * c2.x + d * p3.x, y: a * p0.y + b * c1.y + c * c2.y + d * p3.y });
+          }
+        }
+        var clean = [];
+        pts.forEach(function (p) { if (clean.length === 0 || pdist(clean[clean.length - 1], p) > eps) clean.push(p); });
+        var closed = sub.closed;
+        if (clean.length > 2 && pdist(clean[0], clean[clean.length - 1]) <= eps) closed = true;
+        while (clean.length > 1 && pdist(clean[0], clean[clean.length - 1]) <= eps) clean.pop();
+        if (clean.length < 2) return;
+        if (clean.length < 3 && closed) closed = false;
+        o.contours.push({ pts: clean, closed: closed });
+        des.pointCount += clean.length;
+        if (!counts) return;
+        clean.forEach(function (p) {
+          if (p.x < des.minX) des.minX = p.x; if (p.x > des.maxX) des.maxX = p.x;
+          if (p.y < des.minY) des.minY = p.y; if (p.y > des.maxY) des.maxY = p.y;
+        });
+      });
+      if (o.contours.length > 0) {
+        des.shapes.push(o);
+        if (o.fill === 1) des.fillCount++;
+        if (o.stroke) des.strokeCount++;
+        if (o.fill === 2) des.eraseCount++;
+      }
+    });
+    if (des.shapes.length === 0 || des.minX === Infinity) throw new Error("No usable shapes were found in the SVG file.");
+    var W = function () { return des.maxX - des.minX; }, H = function () { return des.maxY - des.minY; };
+    if (!(W() > 0) && !(H() > 0)) throw new Error("The design has no extent.");
+    if (!(W() > 0)) { var hh = H(); des.minX -= hh * 0.5; des.maxX += hh * 0.5; }
+    if (!(H() > 0)) { var ww = W(); des.minY -= ww * 0.5; des.maxY += ww * 0.5; }
+    des.w = W(); des.h = H();
+    return des;
+  }
+
+  return { load: load };
+})();
+
+</script>
+<script>
+(function () {
+"use strict";
+
+var VERSION = "3.0";
+var TEXTS = JSON.parse(document.getElementById("texts").textContent);
+var TIPS = TEXTS.tips, GUIDE = TEXTS.guide;
+var ENGINE_SRC = document.getElementById("engine-src").textContent;
+var Engine = new Function(ENGINE_SRC + "\n;return Engine;")();
+var STORE_KEY = "stiftplotter-x2d-settings-v1";
+
+// ------------------------------------------------------------------ small helpers
+function h(tag, props, kids) {
+  var e = document.createElement(tag);
+  if (props) for (var k in props) {
+    if (k === "text") e.textContent = props[k];
+    else if (k === "cls") e.className = props[k];
+    else if (k === "on") { for (var ev in props.on) e.addEventListener(ev, props.on[ev]); }
+    else if (k === "style") e.style.cssText = props[k];
+    else e.setAttribute(k, props[k]);
+  }
+  if (kids) kids.forEach(function (c) { if (c) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return e;
+}
+function $(id) { return document.getElementById(id); }
+function fmt(v, d) { return v.toFixed(d); }
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+// ------------------------------------------------------------------ Dialogs
+function dialog(o) {
+  return new Promise(function (resolve) {
+    var prevFocus = document.activeElement;
+    var overlay = h("div", { cls: "overlay" });
+    var box = h("div", { cls: "dlg" + (o.big ? " big" : ""), role: "dialog", "aria-modal": "true" });
+    box.appendChild(h("h2", { text: o.title }));
+    var body = h("div", { cls: "body", text: o.text });
+    if (o.links && o.links.length) {
+      var l = h("div", { cls: "links" });
+      o.links.forEach(function (x) { l.appendChild(h("button", { text: x.label, on: { click: x.fn } })); });
+      body.appendChild(l);
+    }
+    box.appendChild(body);
+    var btns = h("div", { cls: "btns" });
+    var focusBtn = null;
+    function close(v) { document.removeEventListener("keydown", onKey, true); overlay.remove(); if (prevFocus && prevFocus.focus) prevFocus.focus(); resolve(v); }
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!o.noEsc) close(o.cancelValue === undefined ? false : o.cancelValue); }
+    }
+    o.buttons.forEach(function (b) {
+      var btn = h("button", { text: b.label, cls: b.primary ? "primary" : "", on: { click: function () { close(b.value); } } });
+      if (b.focus) focusBtn = btn;
+      btns.appendChild(btn);
+    });
+    box.appendChild(btns);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.addEventListener("keydown", onKey, true);
+    (focusBtn || btns.lastChild).focus();
+  });
+}
+function info(title, text) { return dialog({ title: title, text: text, buttons: [{ label: "OK", value: true, primary: true, focus: true }], cancelValue: true }); }
+function ask(title, text, defaultNo) {
+  return dialog({ title: title, text: text, buttons: [{ label: "Yes", value: true, primary: !defaultNo, focus: !defaultNo }, { label: "No", value: false, primary: !!defaultNo, focus: !!defaultNo }], cancelValue: false });
+}
+
+// ------------------------------------------------------------------ State
+var design = null, designName = "Design";
+var result = null, resultParams = null;
+var updating = true, busy = false, pending = false;
+var computeTimer = null, worker = null, jobId = 0, workerUrl = null;
+var fields = {};          // persisted fields: key -> field
+var U = {};               // UI elements
+var prev;                 // Preview
+var mode = "draw", modeChosen = false;   // "draw" = drawing, "cut" = cutting
+function isCut() { return mode === "cut"; }
+function holder() { return isCut() ? "blade holder" : "pen holder"; }
+function toolWord() { return isCut() ? "blade" : "pen"; }
+
+// ------------------------------------------------------------------ Fields
+function helpBtn(key, title, lblEl) {
+  return h("button", { cls: "help", text: "?", title: "Show explanation", type: "button", on: { click: function () {
+    var k = (isCut() && TIPS[key + "_cut"]) ? key + "_cut" : key;
+    info(lblEl ? cleanTitle(lblEl.textContent) : title, TIPS[k] || "");
+  } } });
+}
+function cleanTitle(t) { return t.replace(" [mm]", "").replace(" [°]", "").replace(" [mm/min]", "").replace(" [mm/s²]", ""); }
+
+function makeNum(min, max, dec, inc, val, key) {
+  var cur = val;
+  var el = h("input", { type: "number", min: String(min), max: String(max), step: String(inc) });
+  var f = { kind: "num", el: el, key: key };
+  function rnd(v) { var p = Math.pow(10, dec); return Math.round(v * p) / p; }
+  function show() { el.value = cur.toFixed(dec); }
+  f.get = function () { return cur; };
+  f.set = function (v) { cur = clamp(rnd(v), min, max); show(); };
+  el.addEventListener("input", function () {
+    var v = parseFloat(el.value.replace(",", "."));
+    if (!isFinite(v)) return;
+    var nv = clamp(rnd(v), min, max);
+    if (nv === cur) return;
+    cur = nv;
+    if (f.onchange) f.onchange();
+    paramChanged();
+  });
+  el.addEventListener("change", function () {
+    var v = parseFloat(el.value.replace(",", "."));
+    if (isFinite(v)) cur = clamp(rnd(v), min, max);
+    show();
+  });
+  show();
+  if (key) fields[key] = f;
+  return f;
+}
+function makeChk(text, val, key) {
+  var el = h("input", { type: "checkbox" });
+  el.checked = val;
+  var f = { kind: "chk", el: el, key: key, label: h("label", null, [el, h("span", { text: text })]) };
+  f.get = function () { return el.checked; };
+  f.set = function (v) { el.checked = !!v; };
+  el.addEventListener("change", function () { if (f.onchange) f.onchange(); paramChanged(); });
+  if (key) fields[key] = f;
+  return f;
+}
+function makeSel(items, idx, key) {
+  var el = h("select");
+  function fill() { el.innerHTML = ""; items.forEach(function (t, i) { el.appendChild(h("option", { value: String(i), text: t })); }); }
+  fill();
+  el.selectedIndex = idx;
+  var f = { kind: "sel", el: el, key: key };
+  f.get = function () { return el.selectedIndex; };
+  f.set = function (i) { if (i >= 0 && i < items.length) el.selectedIndex = i; };
+  f.setItems = function (it) { items = it; fill(); el.selectedIndex = 0; };
+  el.addEventListener("change", function () { if (f.onchange) f.onchange(); });
+  if (key) fields[key] = f;
+  return f;
+}
+function group(parent, title) {
+  var fs = h("fieldset", { cls: "grp" }, [h("legend", { text: title })]);
+  parent.appendChild(fs);
+  return fs;
+}
+function row(g, label, ctls, helpKey) {
+  var lb = h("label", { cls: "lbl", text: label });
+  var r = h("div", { cls: "row" }, [
+    lb,
+    h("div", { cls: "ctl" }, ctls),
+    helpKey ? helpBtn(helpKey, cleanTitle(label), lb) : h("span")
+  ]);
+  g.appendChild(r);
+  r.lbl = lb;
+  return r;
+}
+function rowNum(g, label, key, help, min, max, dec, inc, val) {
+  var f = makeNum(min, max, dec, inc, val, key);
+  f.row = row(g, label, [f.el], help); f.lbl = f.row.lbl;
+  return f;
+}
+function rowNum2(g, label, key1, key2, help, min, max, dec, inc, v1, v2) {
+  var a = makeNum(min, max, dec, inc, v1, key1), b = makeNum(min, max, dec, inc, v2, key2);
+  row(g, label, [a.el, b.el], help);
+  return [a, b];
+}
+function rowSel(g, label, key, help, items, idx) {
+  var f = makeSel(items, idx, key);
+  f.row = row(g, label, [f.el], help); f.lbl = f.row.lbl;
+  return f;
+}
+function rowChk(g, text, key, val, help) {
+  var f = makeChk(text, val, key);
+  g.appendChild(h("div", { cls: "chkrow" }, [f.label, help ? helpBtn(help, text) : h("span")]));
+  return f;
+}
+function btn(text, fn, cls) { return h("button", { text: text, type: "button", cls: cls || "", on: { click: fn } }); }
+
+// ------------------------------------------------------------------ User interface
+var PAPER_PRESETS = [[105, 148], [148, 105], [148, 210], [210, 148], [176, 250], [200, 200]];
+var PAPER_CUSTOM = 6;
+
+function buildUi() {
+  var L = $("colL"), R = $("colR");
+
+  // ===== Left column =====
+  var g1 = group(L, "Design (SVG)");
+  g1.appendChild(h("div", { cls: "btnrow" }, [
+    btn("Load SVG …", function () { $("fileIn").click(); }),
+    btn("Guide …", function () { dialog({ title: (isCut() ? "Cutting guide – " : "Guide – ") + "Stiftplotter " + VERSION, text: isCut() ? TEXTS.guideCut : GUIDE, big: true, buttons: [{ label: "Close", value: true, primary: true, focus: true }], cancelValue: true }); }),
+    helpBtn("svg", "Design (SVG)")
+  ]));
+  U.lblSvg = h("div", { cls: "infotxt", text: "No design loaded.", style: "min-height:50px" });
+  g1.appendChild(U.lblSvg);
+
+  var g3 = group(L, "Size and orientation");
+  U.width = rowNum(g3, "Width [mm]", null, "width", 1, 1000, 1, 1, 100);
+  U.lblHeight = h("span", { text: "Height: –" });
+  U.width.el.parentNode && 0;
+  var rw = g3.lastChild; rw.querySelector(".ctl").appendChild(U.lblHeight);
+  U.rot = rowNum(g3, "Rotation [°]", null, "rot", -360, 360, 1, 1, 0);
+  var rr = g3.lastChild.querySelector(".ctl");
+  rr.appendChild(btn("−90°", function () { rotate(-90); }));
+  rr.appendChild(btn("+90°", function () { rotate(90); }));
+  var off = rowNum2(g3, "Offset right, up [mm]", null, null, "off", -1000, 1000, 2, 0.5, 0, 0);
+  U.offU = off[0]; U.offV = off[1];
+  U.mirror = rowChk(g3, "Mirror", null, false, "mirror");
+  U.clip = rowChk(g3, "Clip at paper edge", "clip", true, "clip");
+  g3.appendChild(h("div", { cls: "btnrow" }, [btn("Center in usable area", centerDesign), btn("Fit to usable area", fitDesign)]));
+
+  var g4 = group(L, "Drawing style");
+  U.gStyle = g4;
+  U.style = rowSel(g4, "Drawing mode", "style", "style", ["Outline only", "Hatched", "Contour fill (follows the edge)"], 1);
+  U.style.onchange = function () { updateStyleEnabled(); paramChanged(); };
+  U.angle = rowNum(g4, "Hatch angle [°]", "angle", "angle", -180, 180, 1, 5, 45);
+  U.spacing = rowNum(g4, "Line spacing [mm]", "spacing", "spacing", 0.1, 10, 2, 0.1, 1.2);
+  U.cross = rowChk(g4, "Cross-hatching", "cross", false, "cross");
+  U.thick = rowNum(g4, "Change thickness [mm]", "thick", "thick", -2, 3, 2, 0.05, 0);
+
+  var gc = group(L, "Cutting (drag knife)");
+  U.gCut = gc;
+  gc.appendChild(h("div", { cls: "infotxt", style: "margin-bottom:6px", text: "Only the contours of the SVG are cut (holes included, no fill). Inner contours first, outer edge last." }));
+  U.knife = rowNum(gc, "Blade offset [mm]", "knife", "knife", 0, 3, 2, 0.05, 0.5);
+  U.cornerAng = rowNum(gc, "Corner angle [°]", "cornerang", "cornerang", 5, 90, 0, 5, 25);
+  U.overcut = rowNum(gc, "Overcut [mm]", "overcut", "overcut", 0, 10, 1, 0.5, 1);
+
+  // ===== Right column =====
+  var g2 = group(R, "Paper and print bed");
+  var bed = rowNum2(g2, "Print bed X × Y [mm]", "bedx", "bedy", "bed", 50, 1000, 0, 1, 256, 256);
+  U.bedX = bed[0]; U.bedY = bed[1];
+  var pap = rowNum2(g2, "Paper width × height [mm]", "paperw", "paperh", "paper", 10, 1000, 1, 1, 148, 210);
+  U.paperW = pap[0]; U.paperH = pap[1];
+  U.preset = rowSel(g2, "Paper size", "preset", null,
+    ["A6 portrait (105 × 148)", "A6 landscape (148 × 105)", "A5 portrait (148 × 210)", "A5 landscape (210 × 148)", "B5 portrait (176 × 250)", "Square (200 × 200)", "Custom size"], 2);
+  U.preset.onchange = presetChanged;
+  U.paperW.onchange = customPaper; U.paperH.onchange = customPaper;
+  var cor = rowNum2(g2, "Paper bottom-left corner X, Y [mm]", "px", "py", "corner", 0, 1000, 1, 1, 20, 20);
+  U.px = cor[0]; U.py = cor[1];
+  U.margin = rowNum(g2, "Margin [mm]", "margin", "margin", 0, 100, 1, 1, 8);
+  U.lblArea = h("div", {cls:"infotxt", style:"margin-top:6px"});
+  g2.appendChild(U.lblArea);
+  g2.appendChild(h("div", {style:"display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px"}, [
+    h("span", {style:"border-left:8px solid #cbd5e1;padding-left:5px", text:"Grey: outside toolhead reach"}),
+    h("span", {style:"border-left:3px dashed #16824a;padding-left:5px", text:"Green: usable paper area"}),
+    h("span", {style:"border-left:3px dashed #3b6fd4;padding-left:5px", text:"Blue: drawing frame"})
+  ]));
+
+  var go = group(R, "Toolhead XY compensation — drawing only");
+  var tc = rowNum2(go, "Nozzle = pen position + X, Y [mm]", "toolx", "tooly", null, -100, 100, 2, 0.1, 28, 35);
+  U.toolX = tc[0]; U.toolY = tc[1];
+  go.appendChild(h("div", {cls:"infotxt", text:"Sebas X2D / Desert Fox: X +28, Y +35 mm. Paper position stays physical. Grey shading marks pen positions outside the toolhead reach; it is not an error. Use 0,0 for an uncompensated holder. Ignored in cutting mode."}));
+
+  var g5 = group(R, "Pen and machine");
+  U.legMach = g5.querySelector("legend");
+  U.profile = rowSel(g5, "Pen profile", "profile", "profile", ["Fineliner", "Pencil", "Custom values"], 0);
+  U.profile.onchange = profileChanged;
+  U.btnMach = btn("Show settings (speed, homing)", toggleMach);
+  U.btnMach.className = "wide";
+  g5.appendChild(h("div", { style: "margin:4px 0 6px" }, [U.btnMach]));
+  U.mach = h("div", { style: "display:none" });
+  g5.appendChild(U.mach);
+  U.fDraw = rowNum(U.mach, "Drawing [mm/min]", "fdraw", "fdraw", 100, 20000, 0, 100, 1200);
+  U.accel = rowNum(U.mach, "Acceleration [mm/s²]", "accel", "accel", 0, 20000, 0, 100, 800);
+  U.fTravel = rowNum(U.mach, "Travel [mm/min]", "ftravel", "ftravel", 500, 30000, 0, 500, 6000);
+  U.fZ = rowNum(U.mach, "Z speed [mm/min]", "fz", "fz", 100, 6000, 0, 100, 1200);
+  U.fLand = rowNum(U.mach, "Slow landing [mm/min]", "fland", "fland", 50, 3000, 0, 50, 600);
+  U.fDraw.onchange = customProfile; U.accel.onchange = customProfile; U.fLand.onchange = customProfile;
+  U.home = rowChk(U.mach, "G28 (homing) at start", "home", true, "home");
+  U.pause = rowChk(U.mach, "Two files: separate homing (attach pen holder afterwards)", "pause", true, "pause");
+
+  var g6 = group(R, "Generate and save");
+  U.lblInfo = h("div", { cls: "infotxt", style: "min-height:62px" });
+  U.lblWarn = h("div", { cls: "warntxt" });
+  g6.appendChild(U.lblInfo); g6.appendChild(U.lblWarn);
+  U.zTitle = h("p", { cls: "ttl", text: "Z heights – check before saving" });
+  var zb = h("div", { cls: "zbox" }, [U.zTitle]);
+  U.zUp = rowNum(zb, "Z pen up [mm]", "zup", "zup", -10, 300, 2, 0.1, 15);
+  U.zDown = rowNum(zb, "Z pen down [mm]", "zdown", "zdown", -10, 300, 2, 0.05, 10);
+  g6.appendChild(zb);
+  U.btnSave = btn("Save G-code …", saveGcode, "primary wide");
+  U.btnSave.style.padding = "9px 10px";
+  g6.appendChild(U.btnSave);
+
+  // Simulation bar
+  var sb = $("simbar");
+  U.btnPlay = btn("Start simulation", simToggle);
+  U.btnPlay.style.minWidth = "140px";
+  U.btnEnd = btn("End", simEnd);
+  U.btnEnd.title = "End the simulation and show the finished drawing";
+  U.trk = h("input", { type: "range", min: "0", max: "1000", value: "0", step: "1" });
+  U.trk.addEventListener("input", simScrub);
+  U.speed = h("select");
+  [5, 20, 60, 200, 600, 2000].forEach(function (v, i) { U.speed.appendChild(h("option", { value: String(v), text: "Speed " + v + "×" })); });
+  U.speed.selectedIndex = 2;
+  U.simTime = h("span", { id: "simTime", text: "–" });
+  [U.btnPlay, U.btnEnd, U.trk, U.speed, U.simTime, helpBtn("sim", "Drawing simulation")].forEach(function (x) { sb.appendChild(x); });
+}
+
+function toggleMach() {
+  var show = U.mach.style.display === "none";
+  U.mach.style.display = show ? "block" : "none";
+  U.btnMach.textContent = show ? "Hide settings" : "Show settings (speed, homing)";
+}
+
+// ------------------------------------------------------------------ Remember settings (browser only)
+var MODEKEYS = { zup: 1, zdown: 1, fdraw: 1, accel: 1, ftravel: 1, fz: 1, fland: 1, profile: 1, home: 1, pause: 1 };
+var MODE_DEFAULTS = {
+  draw: { zup: 15, zdown: 10, fdraw: 1200, accel: 800, ftravel: 6000, fz: 1200, fland: 600, profile: 0, home: true, pause: true },
+  cut:  { zup: 15, zdown: 10, fdraw: 1500, accel: 500, ftravel: 6000, fz: 1200, fland: 300, profile: 0, home: true, pause: true }
+};
+var PROFILE_ITEMS = {
+  draw: ["Fineliner", "Pencil", "Custom values"],
+  cut: ["Vinyl film (starting values)", "Paper / thin film (starting values)", "Custom values"]
+};
+function readStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null") || {}; } catch (e) { return {}; }
+}
+function loadSettings() {
+  var o = readStore();
+  for (var k in fields) {
+    var kk = MODEKEYS[k] ? mode + "." + k : k;
+    if (!(kk in o)) {
+      if (mode === "draw" && MODEKEYS[k] && (k in o)) kk = k;   // old storage format without mode
+      else continue;
+    }
+    var f = fields[k], v = o[kk];
+    if (f.kind === "num") { if (typeof v === "number" && isFinite(v)) f.set(v); }
+    else if (f.kind === "chk") f.set(v === 1 || v === true);
+    else if (f.kind === "sel") { if (typeof v === "number") f.set(v); }
+  }
+}
+var saveTimer = null;
+function saveSettings() {
+  if (!modeChosen) return;
+  var o = readStore();
+  for (var k in fields) {
+    var f = fields[k];
+    var kk = MODEKEYS[k] ? mode + "." + k : k;
+    o[kk] = f.kind === "num" ? f.get() : (f.kind === "chk" ? (f.get() ? 1 : 0) : f.get());
+  }
+  o.lastMode = mode;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { /* e.g. private mode: ignore */ }
+}
+function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSettings, 400); }
+
+// ------------------------------------------------------------------ Mode (draw / cut)
+function applyMode(newMode) {
+  saveSettings();                       // save the values of the previous mode
+  mode = newMode; modeChosen = true;
+  updating = true;
+  U.profile.setItems(PROFILE_ITEMS[mode]);
+  var D = MODE_DEFAULTS[mode];
+  for (var k in D) fields[k].set(D[k]);
+  loadSettings();                       // stored values of this mode
+  updating = false;
+  refreshModeUi();
+  simPause();
+  paramChanged();
+  if (design) { clearTimeout(computeTimer); computeTimer = null; startCompute(); }
+}
+function refreshModeUi() {
+  var c = isCut();
+  U.gStyle.style.display = c ? "none" : "";
+  U.gCut.style.display = c ? "" : "none";
+  U.legMach.textContent = c ? "Blade and machine" : "Pen and machine";
+  U.profile.lbl.textContent = c ? "Cutting profile" : "Pen profile";
+  U.zTitle.textContent = "Z heights – check before saving";
+  U.zUp.lbl.textContent = "Z " + toolWord() + " up [mm]";
+  U.zDown.lbl.textContent = "Z " + toolWord() + " down [mm]";
+  U.btnSave.textContent = c ? "Save cutting G-code …" : "Save G-code …";
+  U.pause.label.lastChild.textContent = "Two files: separate homing (attach " + holder() + " afterwards)";
+  if (U.modeLabel) U.modeLabel.textContent = c ? "Mode: Cut" : "Mode: Draw";
+  updateStyleEnabled();
+}
+function chooseMode(allowCancel) {
+  var last = mode;
+  var btns = [
+    { label: "Draw (pen)", value: "draw", primary: last !== "cut", focus: last !== "cut" },
+    { label: "Cutting (drag knife)", value: "cut", primary: last === "cut", focus: last === "cut" }
+  ];
+  if (allowCancel) btns.push({ label: "Cancel", value: null });
+  return dialog({
+    title: "What would you like to do?",
+    text: "Draw: a pen in the pen holder draws the design on paper. Fills possible via hatching or contour fill.\n\n" +
+          "Cut: a drag knife in the blade holder cuts out the contours of the design, e.g. stickers from vinyl film. Lines only, no fill.\n\n" +
+          "Both modes are used at your own risk. Please read the disclaimer and the safety notes first.",
+    buttons: btns, noEsc: !allowCancel, cancelValue: null
+  });
+}
+
+// ------------------------------------------------------------------ Parameter
+function readParams() {
+  var st = U.style.get();
+  return {
+    bedX: U.bedX.get(), bedY: U.bedY.get(),
+    paperX: U.px.get(), paperY: U.py.get(), paperW: U.paperW.get(), paperH: U.paperH.get(), margin: U.margin.get(),
+    width: U.width.get(), rot: U.rot.get(), offU: U.offU.get(), offV: U.offV.get(),
+    mirror: U.mirror.get(), clip: U.clip.get(),
+    outlineFills: true, drawStrokes: true, hatch: !isCut() && st === 1, contour: !isCut() && st === 2,
+    cut: isCut(), knife: U.knife.get(), cornerAng: U.cornerAng.get(), overcut: U.overcut.get(),
+    cross: U.cross.get(), grey: true,
+    thick: isCut() ? 0 : U.thick.get(), spacing: U.spacing.get(), angle: U.angle.get(), inset: 0.1, simplify: 0.05, minLen: 0.5,
+    zUp: U.zUp.get(), zDown: U.zDown.get(), fDraw: U.fDraw.get(), fTravel: U.fTravel.get(),
+    fZ: U.fZ.get(), fLand: U.fLand.get(), accel: U.accel.get()
+  };
+}
+function readMachine() {
+  return {
+    zUp: U.zUp.get(), zDown: U.zDown.get(), fDraw: U.fDraw.get(), fTravel: U.fTravel.get(),
+    fZ: U.fZ.get(), fLand: U.fLand.get(), accel: U.accel.get(),
+    bedX: U.bedX.get(), bedY: U.bedY.get(), home: U.home.get(), pause: U.pause.get(), cut: isCut(),
+    toolX: U.toolX.get(), toolY: U.toolY.get()
+  };
+}
+
+function paramChanged() {
+  if (updating) return;
+  saveSoon();
+  syncPreview();
+  updateHeightLabel();
+  updateShift();
+  updateInfo();
+  if (!design) return;
+  clearTimeout(computeTimer);
+  computeTimer = setTimeout(function () { computeTimer = null; startCompute(); }, 250);
+}
+function syncPreview() {
+  prev.bedX = U.bedX.get(); prev.bedY = U.bedY.get();
+  prev.paperX = U.px.get(); prev.paperY = U.py.get(); prev.paperW = U.paperW.get(); prev.paperH = U.paperH.get();
+  prev.margin = U.margin.get();
+  prev.toolX = isCut() ? 0 : U.toolX.get(); prev.toolY = isCut() ? 0 : U.toolY.get();
+  var area=Engine.usablePaper(readParams(),readMachine());
+  U.lblArea.textContent="Usable drawing area on this sheet: "+fmt(area.width,1)+" × "+fmt(area.height,1)+" mm. Fit/Center use this area; paper coordinates stay unchanged.";
+  prev.draw();
+}
+function updateShift() {
+  if (!resultParams) { prev.setShift(0, 0); return; }
+  prev.setShift(U.offU.get() - resultParams.offU, U.offV.get() - resultParams.offV);
+}
+function updateHeightLabel() {
+  U.lblHeight.textContent = design ? "Height: " + fmt(U.width.get() * design.h / design.w, 1) + " mm" : "Height: –";
+}
+function updateStyleEnabled() {
+  var s = U.style.get();
+  U.angle.el.disabled = s !== 1;
+  U.cross.el.disabled = s !== 1;
+  U.spacing.el.disabled = s < 1;
+}
+function presetChanged() {
+  if (updating) return;
+  var i = U.preset.get();
+  if (i >= 0 && i < PAPER_PRESETS.length) {
+    updating = true;
+    U.paperW.set(PAPER_PRESETS[i][0]); U.paperH.set(PAPER_PRESETS[i][1]);
+    updating = false;
+  }
+  paramChanged();
+}
+function customPaper() {
+  if (updating) return;
+  updating = true; U.preset.set(PAPER_CUSTOM); updating = false;
+}
+function profileChanged() {
+  if (updating) return;
+  var i = U.profile.get();
+  if (i === 0 || i === 1) {
+    updating = true;
+    if (isCut()) {
+      if (i === 0) { U.fDraw.set(1500); U.accel.set(500); U.fLand.set(300); }
+      else { U.fDraw.set(1200); U.accel.set(400); U.fLand.set(300); }
+    } else {
+      if (i === 0) { U.fDraw.set(1200); U.accel.set(800); U.fLand.set(600); }
+      else { U.fDraw.set(900); U.accel.set(500); U.fLand.set(400); }
+    }
+    updating = false;
+  }
+  paramChanged();
+}
+function customProfile() {
+  if (updating) return;
+  updating = true; U.profile.set(2); updating = false;
+}
+
+// ------------------------------------------------------------------ Load design
+function loadSvgText(text, fileName) {
+  try {
+    var d = SvgLoader.load(text);
+    design = d;
+    designName = fileName.replace(/\.[^.]*$/, "").replace(/[\\\/:*?"<>|]+/g, "_") || "Design";
+    result = null; resultParams = null;
+    simPause();
+    prev.setResult(null, null);
+    prev.setMessage("");
+    updateSimUi();
+    updating = true;
+    U.offU.set(0); U.offV.set(0); U.rot.set(0);
+    U.mirror.set(false);
+    updating = false;
+    U.lblSvg.textContent = fileName + "\nSize in SVG: " + fmt(d.w, 2) + " × " + fmt(d.h, 2) + " units\n" +
+      d.fillCount + " fills · " + d.strokeCount + " stroke lines · " + d.eraseCount + " cut-outs";
+    setStatus("SVG loaded: " + fileName + " (" + d.shapes.length + " shapes, " + d.pointCount + " points)");
+    fitDesign();
+    if (d.warnings.length > 0) info("Notes on the SVG file", d.warnings.join("\n\n"));
+  } catch (ex) {
+    info("Stiftplotter", "The SVG file could not be loaded:\n\n" + ex.message);
+  }
+}
+function loadFile(file) {
+  if (!file) return;
+  if (!/\.svg$/i.test(file.name) && file.type !== "image/svg+xml") {
+    info("Stiftplotter", "Please choose an SVG file (.svg).");
+    return;
+  }
+  var rd = new FileReader();
+  rd.onload = function () { loadSvgText(String(rd.result), file.name); };
+  rd.onerror = function () { info("Stiftplotter", "The file could not be read."); };
+  rd.readAsText(file);
+}
+
+// ------------------------------------------------------------------ Placement
+function rotate(delta) {
+  var r = U.rot.get() + delta;
+  while (r > 180) r -= 360;
+  while (r <= -180) r += 360;
+  U.rot.set(r);
+  paramChanged();
+}
+function centerDesign() {
+  var p=readParams(), a=Engine.usablePaper(p,readMachine());
+  if (a.width<=0.1 || a.height<=0.1)
+    return info("No usable paper area", "The paper margins and the reachable pen area do not overlap. Move the physical paper and update its coordinates, reduce the margins, or choose a smaller sheet.");
+  updating=true;
+  U.offU.set(a.cx-(p.paperX+p.paperW/2)); U.offV.set(a.cy-(p.paperY+p.paperH/2));
+  updating=false; paramChanged();
+}
+function fitDesign() {
+  if (!design) return;
+  var placement=Engine.fitPlacement(design,readParams(),readMachine());
+  if (!placement)
+    return info("No usable paper area", "The paper margins and reachable pen area leave no room for the drawing. Move the physical paper and update its coordinates, reduce the margins, or choose a smaller sheet.");
+  updating=true;
+  U.width.set(placement.width); U.offU.set(placement.offU); U.offV.set(placement.offV);
+  updating=false; paramChanged();
+  clearTimeout(computeTimer);computeTimer=null;startCompute();
+}
+function onPreviewDrag(dx, dy) {
+  if (!design) return;
+  updating = true;
+  U.offU.set(U.offU.get() + dx); U.offV.set(U.offV.get() + dy);
+  updating = false;
+  paramChanged();
+}
+
+// ------------------------------------------------------------------ Calculation (web worker)
+function workerUrlFor() {
+  if (workerUrl) return workerUrl;
+  var src = ENGINE_SRC + "\nonmessage=function(e){var d=e.data;try{postMessage({id:d.id,result:Engine.build(d.design,d.params)});}catch(x){postMessage({id:d.id,error:String(x&&x.message||x)});}};";
+  workerUrl = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  return workerUrl;
+}
+function startCompute() {
+  if (!design) return;
+  if (worker) { worker.terminate(); worker = null; }
+  busy = true;
+  var id = ++jobId, params = readParams(), d = design;
+  setStatusQuiet("Calculating …");
+  function done(res, err) {
+    if (id !== jobId || d !== design) return;
+    busy = false;
+    if (worker) { worker.terminate(); worker = null; }
+    if (err) { setStatus("Calculation error: " + err); return; }
+    result = res; resultParams = params;
+    simPause();
+    prev.setMotion(params.fDraw, params.fTravel, Engine.zTime(params.zUp, params.zDown, params.fZ, params.fLand), params.accel);
+    prev.setResult(res.paths, res.frame);
+    updateSimUi();
+    updateShift();
+    updateInfo();
+    setStatus("Calculated: " + res.paths.length + (isCut() ? " cuts, " : " lines, ") + fmt(res.drawLen / 1000.0, 2) + (isCut() ? " m cutting path." : " m drawing path."));
+  }
+  try {
+    worker = new Worker(workerUrlFor());
+    worker.onmessage = function (e) { done(e.data.result, e.data.error); };
+    worker.onerror = function (e) { done(null, e.message || "Worker error"); };
+    worker.postMessage({ id: id, design: d, params: params });
+  } catch (ex) {
+    // fallback without worker: calculate in the main thread
+    setTimeout(function () {
+      try { done(Engine.build(d, params), null); } catch (e2) { done(null, e2.message); }
+    }, 10);
+  }
+}
+
+function dur(sec) {
+  var mins = Math.round(sec / 60.0);
+  if (mins < 1) return "under 1 min";
+  if (mins < 60) return mins + " min";
+  return Math.floor(mins / 60) + " h " + (mins % 60) + " min";
+}
+function updateInfo() {
+  var warn = [];
+  if (result) {
+    var offsetWarning = Engine.toolheadError(result.paths, readMachine());
+    if (offsetWarning) warn.push(offsetWarning);
+  }
+  if (U.zUp.get() <= U.zDown.get()) warn.push("“Z " + toolWord() + " up” must be greater than “Z " + toolWord() + " down”.");
+  if (U.px.get() < 0 || U.py.get() < 0 || U.px.get() + U.paperW.get() > U.bedX.get() + 0.01 || U.py.get() + U.paperH.get() > U.bedY.get() + 0.01)
+    warn.push("The paper extends beyond the print bed (red paper edge).");
+  if (!design) U.lblInfo.textContent = "No design loaded yet.";
+  else if (!result) U.lblInfo.textContent = "Calculating …";
+  else {
+    if (isCut())
+      U.lblInfo.textContent = result.paths.length + " cuts (contours and lines)\n" +
+        "Cutting path " + fmt(result.drawLen / 1000.0, 2) + " m · travel " + fmt(result.travelLen / 1000.0, 2) + " m · " + result.liftCount + " pen-downs\n" +
+        "Duration at least approx. " + dur(result.seconds) + " (a bit longer in reality)";
+    else
+    U.lblInfo.textContent = result.paths.length + " lines (" + result.outlinePaths + " contours, " + result.hatchLines + " fill)\n" +
+      "Drawing path " + fmt(result.drawLen / 1000.0, 2) + " m · travel " + fmt(result.travelLen / 1000.0, 2) + " m · " + result.liftCount + " pen-downs\n" +
+      "Duration at least approx. " + dur(result.seconds) + " (a bit longer in reality)";
+    if (result.paths.length === 0) warn.push(isCut() ? "No cuts were generated. The design lies outside the paper or contains no contours." : "No lines were generated. Check the drawing style, or the design lies outside the paper.");
+    if (result.outsideBed) warn.push("Parts of the drawing lie outside the print bed.");
+    if (result.outsidePaper) warn.push("Parts of the drawing lie outside the paper (enable clipping or make it smaller).");
+  }
+  U.lblWarn.textContent = warn.join("\n");
+}
+function setStatus(s) { $("status").textContent = s; }
+function setStatusQuiet(s) { $("status").textContent = s; }
+
+// ------------------------------------------------------------------ Save
+function download(name, text) {
+  var url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  var a = h("a", { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+}
+function checkZ(m) {
+  if (m.zUp <= m.zDown) {
+    return info("Stiftplotter", "“Z " + toolWord() + " up” must be greater than “Z " + toolWord() + " down”.").then(function () { return false; });
+  }
+  if (m.zDown < 2.0) {
+    return ask("Stiftplotter",
+      "“Z " + toolWord() + " down” is only " + fmt(m.zDown, 2) + " mm.\n\n" +
+      "The " + (isCut() ? "blade holder" : "pen") + " normally sticks out several millimetres below the nozzle. At Z = 0 the NOZZLE touches the bed – " + (isCut() ? "the blade would then cut into the bed." : "the pen would then press into the bed.") + "\n\n" +
+      "Has the value been checked? Save anyway?", true);
+  }
+  return Promise.resolve(true);
+}
+function saveGcode() {
+  if (!design || !result || result.paths.length === 0)
+    return info("Stiftplotter", "There is nothing to save yet. Please load an SVG file first.");
+  if (busy || computeTimer)
+    return info("Stiftplotter", "The calculation is still running. Please wait a moment and click again.");
+  var m = readMachine();
+  var res = result;
+  var offsetError = Engine.toolheadError(res.paths, m);
+  if (offsetError) return dialog({title:"Drawing exceeds usable area", text:offsetError,
+    buttons:[{label:"Fit to usable area",value:true,primary:true,focus:true},{label:"Cancel",value:false}],cancelValue:false
+  }).then(function(fit){if(fit)fitDesign();});
+  return checkZ(m).then(function (ok) {
+    if (!ok) return;
+    return ask("Confirm Z heights",
+      "Please confirm both Z heights:\n\n" +
+      "Z " + toolWord() + " up:     " + fmt(m.zUp, 2) + " mm   (" + toolWord() + " raised, travel moves)\n" +
+      "Z " + toolWord() + " down:   " + fmt(m.zDown, 2) + " mm   (" + (isCut() ? "blade cuts the material" : "pen touches the paper") + ")\n\n" +
+      "Are both values correct?", true).then(function (ok2) {
+      if (!ok2) return;
+      var pre = isCut() ? ask("Cutting – safety check",
+        "Please confirm:\n\n" +
+        "• The blade holder with the blade is firmly seated, the blade only protrudes slightly.\n" +
+        "• There is a cutting mat or sacrificial board under the material, the build plate is protected.\n" +
+        "• The cutting depth has been checked with a test cut.\n" +
+        "• I will stay at the printer while it cuts, with my hand on the stop button.\n\n" +
+        "Is everything done?", true) : Promise.resolve(true);
+      return pre.then(function (okPre) {
+      if (!okPre) return;
+      var p1 = res.outsideBed ? ask("Stiftplotter", "Parts of the drawing lie outside the print bed and will be clipped.\n\nSave anyway?", true) : Promise.resolve(true);
+      return p1.then(function (ok3) {
+        if (!ok3) return;
+        var p2 = res.outsidePaper ? ask("Stiftplotter", "Parts of the drawing lie outside the paper. " + (isCut() ? "The blade would cut into the bed there." : "The pen would draw on the bed there.") + "\n\nSave anyway?", true) : Promise.resolve(true);
+        return p2.then(function (ok4) {
+          if (!ok4) return;
+          writeFiles(res, m);
+        });
+      });
+      });
+    });
+  });
+}
+function writeFiles(res, m) {
+  var name = designName + (isCut() ? "_Cut" : "");
+  var text = Engine.gcodeWrite(res.paths, m, name, VERSION);
+  var homing = (m.home && m.pause) ? Engine.gcodeHoming(m, name, VERSION) : null;
+  if (homing === null) {
+    download(name + ".gcode", text);
+    setStatus("G-code created: " + name + ".gcode");
+    info("Stiftplotter", "G-code created:\n" + name + ".gcode\n\nThe browser saves the file to your Downloads folder.");
+    return;
+  }
+  var f1 = name + "_Part1_Homing.gcode", f2 = name + (isCut() ? "_Part2_Cut.gcode" : "_Part2_Draw.gcode");
+  download(f1, homing);
+  setTimeout(function () { download(f2, text); }, 400);
+  setStatus("G-code created: " + f1 + " and " + f2);
+  dialog({
+    title: "Stiftplotter",
+    text: "Two files created:\n\n1) " + f1 + "\n2) " + f2 + "\n\n" +
+      "Procedure: start Part 1 (homing, the bed moves down 50 mm, the head stays put in XY), still WITHOUT the " + holder() + ". Then attach the " + holder() + " and start Part 2 when you are ready.\n\n" +
+      "If the browser asks whether multiple files may be downloaded, please allow it. If a file is missing, download it again here:",
+    links: [{ label: f1 + " download", fn: function () { download(f1, homing); } }, { label: f2 + " download", fn: function () { download(f2, text); } }],
+    buttons: [{ label: "OK", value: true, primary: true, focus: true }], cancelValue: true
+  });
+}
+
+// ------------------------------------------------------------------ Preview
+function Preview(canvas) {
+  this.cv = canvas; this.ctx = canvas.getContext("2d");
+  this.bedX = 256; this.bedY = 256; this.paperX = 20; this.paperY = 20; this.paperW = 148; this.paperH = 210; this.margin = 8;
+  this.paths = null; this.frame = null; this.msg = "";
+  this.sx = 0; this.sy = 0; this.dragX = 0; this.dragY = 0;
+  this.simOn = false; this.simT = 0; this.tl = null;
+  this.simPath = null; this.simIdx = 0; this.simPartial = null;
+  this.lay = { s: 1, ox: 0, oy: 0 };
+  var self = this, drag = null;
+  canvas.addEventListener("pointerdown", function (e) {
+    if (!self.paths || e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY };
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = "grabbing";
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!drag) { canvas.style.cursor = self.paths ? "grab" : "default"; return; }
+    self.dragX = (e.clientX - drag.x) / self.lay.s;
+    self.dragY = -(e.clientY - drag.y) / self.lay.s;
+    self.draw();
+  });
+  function end(e) {
+    if (!drag) return;
+    var dx = (e.clientX - drag.x) / self.lay.s, dy = -(e.clientY - drag.y) / self.lay.s;
+    drag = null; self.dragX = 0; self.dragY = 0;
+    canvas.style.cursor = "grab";
+    if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) onPreviewDrag(Math.round(dx * 100) / 100, Math.round(dy * 100) / 100);
+    else self.draw();
+  }
+  canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("pointercancel", end);
+  window.addEventListener("resize", function () { self.draw(); });
+  if (window.ResizeObserver) new ResizeObserver(function () { self.draw(); }).observe(canvas.parentNode);
+}
+Preview.prototype.setShift = function (dx, dy) { this.sx = dx; this.sy = dy; this.draw(); };
+Preview.prototype.setMessage = function (m) { this.msg = m; this.draw(); };
+Preview.prototype.setResult = function (paths, frame) {
+  this.paths = paths; this.frame = frame; this.tl = null; this.simOn = false; this.simT = 0;
+  this.simPath = null; this.simIdx = 0; this.simPartial = null;
+  this.sx = 0; this.sy = 0;
+  this.draw();
+};
+Preview.prototype.setMotion = function (fDraw, fTravel, zt, accel) { this.mot = { fDraw: fDraw, fTravel: fTravel, zt: zt, accel: accel }; };
+
+// Simulation timeline (same logic as the time estimate)
+Preview.prototype.timeline = function () {
+  if (this.tl) return this.tl;
+  var m = this.mot, P = this.paths, n = P.length;
+  var vd = Math.max(1, m.fDraw) / 60, vt = Math.max(1, m.fTravel) / 60;
+  var tl = { fromPt: [], tTravel: [], tDrawS: [], tDrawE: [], pLen: [], joined: [], total: 0 };
+  var cur = { x: this.paperX, y: this.paperY }, down = false, t = 0;
+  for (var i = 0; i < n; i++) {
+    var p = P[i], d = Engine.dist(cur, p[0]);
+    tl.fromPt.push(cur);
+    var j = down && d < Engine.JoinTol;
+    tl.joined.push(j);
+    tl.tTravel.push(t);
+    if (!j) { t += Engine.moveTime(d, vt, m.accel); t += m.zt; down = true; }
+    tl.tDrawS.push(t);
+    var len = Engine.length(p);
+    tl.pLen.push(len);
+    t += Engine.moveTime(len, vd, m.accel);
+    tl.tDrawE.push(t);
+    cur = p[p.length - 1];
+  }
+  tl.total = t; this.tl = tl;
+  return tl;
+};
+// Simulation state at time t: { idx, partialPts, marker, down }
+Preview.prototype.stateAt = function (t) {
+  var tl = this.timeline(), n = this.paths.length;
+  if (n === 0) return { idx: 0, part: null, mk: { x: this.paperX, y: this.paperY }, down: false };
+  if (t >= tl.total) { var lp = this.paths[n - 1]; return { idx: n, part: null, mk: lp[lp.length - 1], down: true }; }
+  var lo = 0, hi = n - 1;
+  while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (tl.tTravel[mid] <= t) lo = mid; else hi = mid - 1; }
+  var i = lo, p = this.paths[i];
+  if (t < tl.tDrawS[i]) {
+    var a = tl.fromPt[i], b = p[0], tt = tl.tDrawS[i] - this.mot.zt - tl.tTravel[i];
+    var f = tt > 0 ? clamp((t - tl.tTravel[i]) / tt, 0, 1) : 1;
+    return { idx: i, part: null, mk: { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }, down: false };
+  }
+  var dur = tl.tDrawE[i] - tl.tDrawS[i], fr = dur > 0 ? clamp((t - tl.tDrawS[i]) / dur, 0, 1) : 1;
+  var target = fr * tl.pLen[i], acc = 0, pts = [p[0]], mk = p[0];
+  for (var k = 1; k < p.length; k++) {
+    var sl = Engine.dist(p[k - 1], p[k]);
+    if (acc + sl >= target) {
+      var ff = sl > 0 ? (target - acc) / sl : 0;
+      mk = { x: p[k - 1].x + (p[k].x - p[k - 1].x) * ff, y: p[k - 1].y + (p[k].y - p[k - 1].y) * ff };
+      pts.push(mk); break;
+    }
+    acc += sl; pts.push(p[k]); mk = p[k];
+  }
+  return { idx: i, part: pts, mk: mk, down: true };
+};
+Preview.prototype.simSet = function (t) {
+  var tl = this.timeline();
+  this.simT = clamp(t, 0, tl.total);
+  this.simOn = true;
+  var st = this.stateAt(this.simT);
+  if (!this.simPath || st.idx < this.simIdx) { this.simPath = new Path2D(); this.simIdx = 0; }
+  for (; this.simIdx < st.idx; this.simIdx++) {
+    var p = this.paths[this.simIdx];
+    this.simPath.moveTo(p[0].x, p[0].y);
+    for (var k = 1; k < p.length; k++) this.simPath.lineTo(p[k].x, p[k].y);
+  }
+  this.simPartial = st.part; this.simMk = st.mk; this.simDown = st.down;
+  this.draw();
+};
+Preview.prototype.simOff = function () {
+  this.simOn = false; this.simPath = null; this.simIdx = 0; this.simPartial = null; this.draw();
+};
+
+Preview.prototype.draw = function () {
+  var cv = this.cv, par = cv.parentNode;
+  var W = par.clientWidth, H = par.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (W < 10 || H < 10) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  var c = this.ctx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, H);
+  var pad = 14, s = Math.min((W - 2 * pad) / this.bedX, (H - 2 * pad) / this.bedY);
+  if (!(s > 0)) return;
+  var ox = (W - this.bedX * s) / 2, oy = (H + this.bedY * s) / 2;
+  this.lay = { s: s, ox: ox, oy: oy };
+  function X(x) { return ox + x * s; }
+  function Y(y) { return oy - y * s; }
+  // Print bed
+  c.fillStyle = "#fdfdfb"; c.fillRect(X(0), Y(this.bedY), this.bedX * s, this.bedY * s);
+  c.strokeStyle = "#d4d4cf"; c.lineWidth = 1; c.beginPath();
+  for (var gx = 50; gx < this.bedX; gx += 50) { c.moveTo(X(gx), Y(0)); c.lineTo(X(gx), Y(this.bedY)); }
+  for (var gy = 50; gy < this.bedY; gy += 50) { c.moveTo(X(0), Y(gy)); c.lineTo(X(this.bedX), Y(gy)); }
+  c.stroke();
+  c.strokeStyle = "#555"; c.lineWidth = 1.5; c.strokeRect(X(0), Y(this.bedY), this.bedX * s, this.bedY * s);
+  // Paper
+  var inside = this.paperX >= 0 && this.paperY >= 0 && this.paperX + this.paperW <= this.bedX + 0.01 && this.paperY + this.paperH <= this.bedY + 0.01;
+  c.fillStyle = "#ffffff"; c.fillRect(X(this.paperX), Y(this.paperY + this.paperH), this.paperW * s, this.paperH * s);
+  c.strokeStyle = inside ? "#888" : "#d02020"; c.lineWidth = inside ? 1 : 2;
+  c.strokeRect(X(this.paperX), Y(this.paperY + this.paperH), this.paperW * s, this.paperH * s);
+  if (this.margin > 0 && this.paperW > 2 * this.margin && this.paperH > 2 * this.margin) {
+    c.setLineDash([4, 4]); c.strokeStyle = "#aaa"; c.lineWidth = 1;
+    c.strokeRect(X(this.paperX + this.margin), Y(this.paperY + this.paperH - this.margin), (this.paperW - 2 * this.margin) * s, (this.paperH - 2 * this.margin) * s);
+    c.setLineDash([]);
+  }
+  // Reachable PEN TIP area after compensating the physical holder offset.
+  var tx = this.toolX || 0, ty = this.toolY || 0;
+  var xmin = Math.max(0, -tx), xmax = Math.min(this.bedX, this.bedX - tx);
+  var ymin = Math.max(0, -ty), ymax = Math.min(this.bedY, this.bedY - ty);
+  if (tx || ty) {
+    c.fillStyle = "rgba(71,85,105,0.10)";
+    c.fillRect(X(0),Y(this.bedY),xmin*s,this.bedY*s);
+    c.fillRect(X(xmax),Y(this.bedY),(this.bedX-xmax)*s,this.bedY*s);
+    c.fillRect(X(xmin),Y(this.bedY),(xmax-xmin)*s,(this.bedY-ymax)*s);
+    c.fillRect(X(xmin),Y(ymin),(xmax-xmin)*s,ymin*s);
+    c.setLineDash([5,4]); c.strokeStyle="#94a3b8"; c.lineWidth=1;
+    c.strokeRect(X(xmin),Y(ymax),(xmax-xmin)*s,(ymax-ymin)*s); c.setLineDash([]);
+  }
+  var ux0=Math.max(this.paperX+this.margin,xmin), uy0=Math.max(this.paperY+this.margin,ymin);
+  var ux1=Math.min(this.paperX+this.paperW-this.margin,xmax), uy1=Math.min(this.paperY+this.paperH-this.margin,ymax);
+  if (ux1>ux0 && uy1>uy0) {
+    c.setLineDash([3,3]);c.strokeStyle="#16824a";c.lineWidth=1.5;
+    c.strokeRect(X(ux0),Y(uy1),(ux1-ux0)*s,(uy1-uy0)*s);c.setLineDash([]);
+  }
+  // Origin / labels
+  c.fillStyle = "#777"; c.font = "11px sans-serif"; c.textAlign = "left"; c.textBaseline = "top";
+  c.fillText("0,0", X(0) + 3, Y(0) - 14);
+  var dx = this.sx + this.dragX, dy = this.sy + this.dragY;
+  if (this.paths) {
+    // Design frame
+    if (this.frame) {
+      c.setLineDash([5, 4]); c.strokeStyle = "#3b6fd4"; c.lineWidth = 1; c.beginPath();
+      for (var i = 0; i < 4; i++) { var q = this.frame[i]; if (i === 0) c.moveTo(X(q.x + dx), Y(q.y + dy)); else c.lineTo(X(q.x + dx), Y(q.y + dy)); }
+      c.closePath(); c.stroke(); c.setLineDash([]);
+    }
+    c.save();
+    c.translate(ox + dx * s, oy - dy * s); c.scale(s, -s);
+    c.lineJoin = "round"; c.lineCap = "round"; c.strokeStyle = "#000";
+    c.lineWidth = Math.max(1, 0.4 * s) / s;
+    if (this.simOn) {
+      if (this.simPath) c.stroke(this.simPath);
+      if (this.simPartial && this.simPartial.length > 1) {
+        c.beginPath(); c.moveTo(this.simPartial[0].x, this.simPartial[0].y);
+        for (var k = 1; k < this.simPartial.length; k++) c.lineTo(this.simPartial[k].x, this.simPartial[k].y);
+        c.stroke();
+      }
+    } else {
+      c.beginPath();
+      for (var a = 0; a < this.paths.length; a++) {
+        var p = this.paths[a]; c.moveTo(p[0].x, p[0].y);
+        for (var b = 1; b < p.length; b++) c.lineTo(p[b].x, p[b].y);
+      }
+      c.stroke();
+    }
+    c.restore();
+    if (this.simOn && this.simMk) {
+      var mx = X(this.simMk.x + dx), my = Y(this.simMk.y + dy);
+      c.beginPath(); c.arc(mx, my, 7, 0, 6.2832);
+      if (this.simDown) { c.fillStyle = "rgba(220,40,40,.85)"; c.fill(); }
+      c.strokeStyle = "#c01818"; c.lineWidth = 2; c.stroke();
+    }
+  }
+  if (this.msg || !design) {
+    c.fillStyle = "#666"; c.font = "15px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(this.msg || "Load an SVG file or drag it here", W / 2, H / 2);
+  }
+};
+
+// ------------------------------------------------------------------ Simulation
+var simTimer = null, simLast = 0, simPlaying = false;
+function simTotal() { return prev.paths && prev.mot ? prev.timeline().total : 0; }
+function mss(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + (sec % 60 < 10 ? "0" : "") + (sec % 60); }
+function updateSimUi() {
+  var has = !!(prev.paths && prev.paths.length > 0);
+  U.btnPlay.disabled = !has; U.btnEnd.disabled = !has; U.trk.disabled = !has;
+  U.btnPlay.textContent = simPlaying ? "Pause" : (prev.simOn && prev.simT > 0 && prev.simT < simTotal() ? "Resume" : "Start simulation");
+  var tot = has ? simTotal() : 0;
+  U.simTime.textContent = has ? mss(prev.simOn ? prev.simT : tot) + " / " + mss(tot) : "–";
+  U.trk.value = has ? String(prev.simOn && tot > 0 ? Math.round(prev.simT / tot * 1000) : 1000) : "0";
+}
+function simPause() {
+  simPlaying = false;
+  if (simTimer) { cancelAnimationFrame(simTimer); simTimer = null; }
+  updateSimUi();
+}
+function simFrame(now) {
+  if (!simPlaying) return;
+  var dt = (now - simLast) / 1000; simLast = now;
+  var sp = parseFloat(U.speed.value) || 60;
+  var t = prev.simT + Math.min(dt, 0.1) * sp, tot = simTotal();
+  if (t >= tot) { prev.simSet(tot); simPause(); return; }
+  prev.simSet(t); updateSimUi();
+  simTimer = requestAnimationFrame(simFrame);
+}
+function simToggle() {
+  if (!prev.paths || !prev.paths.length) return;
+  if (simPlaying) { simPause(); return; }
+  var tot = simTotal();
+  if (!prev.simOn || prev.simT >= tot) prev.simSet(0);
+  simPlaying = true; simLast = performance.now();
+  updateSimUi();
+  simTimer = requestAnimationFrame(simFrame);
+}
+function simEnd() {
+  simPause();
+  if (prev.paths) prev.simOff();
+  updateSimUi();
+}
+function simScrub() {
+  if (!prev.paths || !prev.paths.length) return;
+  var v = parseInt(U.trk.value, 10) / 1000;   // read first: otherwise simPause() resets the slider
+  var was = simPlaying; simPause();
+  var tot = simTotal();
+  if (v >= 1) { simEnd(); U.trk.value = "1000"; return; }
+  prev.simSet(v * tot);
+  updateSimUi();
+  if (was) { simPlaying = true; simLast = performance.now(); simTimer = requestAnimationFrame(simFrame); updateSimUi(); }
+}
+
+// ------------------------------------------------------------------ Start
+function init() {
+  buildUi();
+  prev = new Preview($("cv"));
+  U.modeLabel = h("button", { type: "button", cls: "modebtn", text: "Mode: Draw", title: "Switch between drawing and cutting", on: { click: function () { chooseMode(true).then(function (m) { if (m && m !== mode) applyMode(m); }); } } });
+  document.querySelector("header.top").appendChild(U.modeLabel);
+  loadSettings();
+  updateStyleEnabled();
+  updating = false;
+  syncPreview();
+  updateHeightLabel();
+  updateInfo();
+  updateSimUi();
+  refreshModeUi();
+  applyMode("draw");   // always start in draw mode; switch via the mode button
+  $("fileIn").addEventListener("change", function (e) { loadFile(e.target.files[0]); e.target.value = ""; });
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+  });
+  window.addEventListener("beforeunload", saveSettings);
+  window.__stiftplotter = { loadSvgText: loadSvgText, state: function () { return { design: design, result: result }; } };
+}
+init();
+})();
+
+</script>
+</body>
+</html>
