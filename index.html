@@ -2016,8 +2016,8 @@ function buildUi() {
   g6.appendChild(U.lblInfo); g6.appendChild(U.lblWarn);
   U.zTitle = h("p", { cls: "ttl", text: "Z heights – check before saving" });
   var zb = h("div", { cls: "zbox" }, [U.zTitle]);
-  U.zUp = rowNum(zb, "Z pen up [mm]", "zup", "zup", -10, 300, 2, 0.1, 15);
-  U.zDown = rowNum(zb, "Z pen down [mm]", "zdown", "zdown", -10, 300, 2, 0.05, 10);
+  U.zUp = rowNum(zb, "Z pen up [mm]", "zup", "zup", -10, 300, 2, 0.1, 25);
+  U.zDown = rowNum(zb, "Z pen down [mm]", "zdown", "zdown", -10, 300, 2, 0.05, 14);
   g6.appendChild(zb);
   U.btnSave = btn("Save G-code …", saveGcode, "primary wide");
   U.btnSave.style.padding = "9px 10px";
@@ -2047,7 +2047,7 @@ function toggleMach() {
 // ------------------------------------------------------------------ Remember settings (browser only)
 var MODEKEYS = { zup: 1, zdown: 1, fdraw: 1, accel: 1, ftravel: 1, fz: 1, fland: 1, profile: 1, home: 1, pause: 1 };
 var MODE_DEFAULTS = {
-  draw: { zup: 15, zdown: 10, fdraw: 1200, accel: 800, ftravel: 6000, fz: 1200, fland: 600, profile: 0, home: true, pause: true },
+  draw: { zup: 25, zdown: 14, fdraw: 1200, accel: 800, ftravel: 6000, fz: 1200, fland: 600, profile: 0, home: true, pause: true },
   cut:  { zup: 15, zdown: 10, fdraw: 1500, accel: 500, ftravel: 6000, fz: 1200, fland: 300, profile: 0, home: true, pause: true }
 };
 var PROFILE_ITEMS = {
