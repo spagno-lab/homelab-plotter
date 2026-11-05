@@ -15,4 +15,4 @@ La build copia l'applicazione e le attribuzioni in `dist/`. L'HTML è autosuffic
 
 Il workflow [pages.yml](.github/workflows/pages.yml) controlla ogni push e pull request su `main`. Dopo un push su `main` o un avvio manuale, costruisce e pubblica il sito su Pages. I pull request eseguono soltanto i controlli e la build.
 
-**Entrambi i job usano `runs-on: [self-hosted, linux]`**. Le azioni sono fissate a commit verificati; il token ha permessi di sola lettura nel job di build e permessi Pages/OIDC soltanto nel deploy. In Settings → Pages la sorgente è GitHub Actions. I runner dell'organizzazione devono essere abilitati per questo repository pubblico.
+Entrambi i job usano runner GitHub-hosted (`ubuntu-latest`), così i workflow del repository pubblico vengono eseguiti fuori dai runner del homelab. Le azioni sono fissate a commit verificati; il token ha permessi di sola lettura nel job di build e permessi Pages/OIDC soltanto nel deploy. In Settings → Pages la sorgente è GitHub Actions.
