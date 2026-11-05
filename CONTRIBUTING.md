@@ -1,18 +1,23 @@
 # Sviluppo
 
-## Controlli locali
-
-Richiede Node.js 22 o successivo, senza pacchetti da installare:
+Node.js 22 o successivo. Le dipendenze sono usate solo per i test nel browser; l'applicazione distribuita resta un HTML autosufficiente.
 
 ```sh
+npm ci
 npm test
+npx playwright install chromium
+npm run test:browser
 npm run build
 ```
 
-La build copia l'applicazione e le attribuzioni in `dist/`. L'HTML è autosufficiente e non richiede un percorso base speciale per GitHub Pages. I test verificano sintassi degli script, JSON degli aiuti, compensazione XY, limiti del bed, separazione Homing/Draw e 108 combinazioni di Fit con formati, rotazioni e offset diversi. Non sono prove fisiche sulla stampante.
+La build copia HTML, licenza, attribuzioni e guida in `dist/`. I test unitari verificano generazione G-code, limiti della testina, pulizia e clipping, testo, conversione raster e formato progetti. I test Chromium coprono anche importazione, interfaccia, ripristino progetti, passate per colore, ridimensionamento mobile e utilizzo offline. Le prove automatiche non muovono una stampante.
 
-## GitHub Actions e Pages
+## Pubblicazione
 
-Il workflow [pages.yml](.github/workflows/pages.yml) controlla ogni push e pull request su `main`. Dopo un push su `main` o un avvio manuale, costruisce e pubblica il sito su Pages. I pull request eseguono soltanto i controlli e la build.
+Il workflow [pages.yml](.github/workflows/pages.yml) esegue controlli e build sui push e pull request verso `main`. Pubblica su Pages dopo push su `main` o avvio manuale. I pull request non eseguono il deploy.
 
-Entrambi i job usano runner GitHub-hosted (`ubuntu-latest`), così i workflow del repository pubblico vengono eseguiti fuori dai runner del homelab. Le azioni sono fissate a commit verificati; il token ha permessi di sola lettura nel job di build e permessi Pages/OIDC soltanto nel deploy. In Settings → Pages la sorgente è GitHub Actions.
+Entrambi i job usano runner GitHub-hosted `ubuntu-latest`. Le azioni sono fissate a commit; il token è in sola lettura durante la build e riceve permessi Pages/OIDC soltanto nel deploy. Settings → Pages usa la sorgente GitHub Actions.
+
+## Attribuzioni
+
+Mantenere copyright e licenza MIT anche nel commento iniziale di `index.html`, oltre che in `LICENSE`. Documentare contributi e dipendenze distribuite in [CREDITS.md](CREDITS.md). Non includere modelli o demo esterni senza verificarne la licenza specifica.

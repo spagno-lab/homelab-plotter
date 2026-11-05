@@ -1,14 +1,18 @@
 {
   "name": "homelab-plotter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Browser SVG to G-code tool for the Bambu Lab X2D",
   "scripts": {
     "test": "node --test",
-    "build": "node scripts/build.cjs"
+    "build": "node scripts/build.cjs",
+    "test:browser": "playwright test"
   },
   "engines": {
     "node": ">=22"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
+  }
 }

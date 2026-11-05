@@ -21,8 +21,14 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
+      - name: Install test dependencies
+        run: npm ci
       - name: Test SVG placement and G-code generation
         run: npm test
+      - name: Install browser for integration tests
+        run: npx playwright install --with-deps chromium
+      - name: Test browser workflows
+        run: npm run test:browser
       - name: Build static site
         run: npm run build
       - name: Upload Pages artifact
