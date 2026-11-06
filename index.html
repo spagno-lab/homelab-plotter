@@ -1265,6 +1265,13 @@ var Engine = (function () {
     g.push("; Generated on " + now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()) + " " + pad2(now.getHours()) + ":" + pad2(now.getMinutes()));
     g.push("; Paths: " + paths.length);
     g.push("; Toolhead compensation: nozzle X = pen X + " + f3(tool.x) + "; nozzle Y = pen Y + " + f3(tool.y) + " mm");
+    if ([m.paperX,m.paperY,m.paperW,m.paperH].every(Number.isFinite))
+      g.push("; Paper: bottom-left X"+f3(m.paperX)+" Y"+f3(m.paperY)+"; size "+f3(m.paperW)+" x "+f3(m.paperH)+" mm");
+    if (paths.length) {
+      var bx0=Infinity,by0=Infinity,bx1=-Infinity,by1=-Infinity;
+      paths.forEach(function(path){path.forEach(function(p){bx0=Math.min(bx0,p.x);by0=Math.min(by0,p.y);bx1=Math.max(bx1,p.x);by1=Math.max(by1,p.y);});});
+      g.push("; Pen bounds: X"+f3(bx0)+".."+f3(bx1)+" Y"+f3(by0)+".."+f3(by1)+" mm");
+    }
     g.push("; Z up " + f3(m.zUp) + " / Z down " + f3(m.zDown) + (m.cut ? " / Cut F" : " / Draw F") + Fd(m.fDraw) + " / Acceleration " + Fd(m.accel));
     g.push("; NO extrusion, heaters stay off");
     g.push("G21 ; mm");
@@ -2450,6 +2457,7 @@ function readMachine() {
     bedX: U.bedX.get(), bedY: U.bedY.get(), home: U.home.get(), pause: U.pause.get(), cut: isCut(),
     headMinX:U.headMinX.get(),headMaxX:U.headMaxX.get(),headMinY:U.headMinY.get(),headMaxY:U.headMaxY.get(),
     toolX: U.toolX.get(), toolY: U.toolY.get()
+    ,paperX:U.px.get(),paperY:U.py.get(),paperW:U.paperW.get(),paperH:U.paperH.get()
   };
 }
 
@@ -2821,6 +2829,11 @@ function updateInfo() {
       "Drawing path " + fmt(result.drawLen / 1000.0, 2) + " m · travel " + fmt(result.travelLen / 1000.0, 2) + " m · " + result.liftCount + " pen-downs\n" +
       "Duration at least approx. " + dur(result.seconds) + " (a bit longer in reality)";
     if (result.paths.length === 0) warn.push(isCut() ? "No cuts were generated. The design lies outside the paper or contains no contours." : "No lines were generated. Check the drawing style, or the design lies outside the paper.");
+    if(result.paths.length && !busy && !computeTimer){
+      var x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      result.paths.forEach(function(path){path.forEach(function(p){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);});});
+      U.lblInfo.textContent+='\nPaper-edge distances L / R / B / T: '+[x0-U.px.get(),U.px.get()+U.paperW.get()-x1,y0-U.py.get(),U.py.get()+U.paperH.get()-y1].map(function(v){return fmt(v,2);}).join(' / ')+' mm';
+    }
     if (result.outsideBed) warn.push("Parts of the drawing lie outside the print bed.");
     if (result.outsidePaper) warn.push("Parts of the drawing lie outside the paper (enable clipping or make it smaller).");
   }
