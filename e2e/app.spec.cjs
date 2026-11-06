@@ -10,9 +10,46 @@ async function ready(page){
 }
 async function load(page,svg=simple){await page.evaluate(s=>window.__homelabPlotter.loadSvgText(s,'fixture.svg'),svg);await page.waitForFunction(()=>{const s=window.__homelabPlotter.state();return !!s.result&&!s.busy;});}
 
+test('paper can be centered on the bed or within independent compensated head limits',async({page})=>{
+  const errors=await ready(page);
+  await page.getByRole('button',{name:'Center paper on bed',exact:true}).click();
+  await expect(page.locator('[data-setting="px"]')).toHaveValue('54.0');
+  await expect(page.locator('[data-setting="py"]')).toHaveValue('23.0');
+  await page.getByRole('button',{name:'Center paper in reachable area',exact:true}).click();
+  await expect(page.locator('[data-setting="px"]')).toHaveValue('40.0');
+  await expect(page.locator('[data-setting="py"]')).toHaveValue('5.5');
+  await page.getByText('Head travel limits',{exact:true}).click();
+  await page.locator('[data-setting="headmaxy"]').fill('260');
+  await page.getByRole('button',{name:'Center paper in reachable area',exact:true}).click();
+  await expect(page.locator('[data-setting="py"]')).toHaveValue('7.5');
+  await page.locator('[data-setting="paperh"]').fill('297');
+  await page.getByRole('button',{name:'Center paper in reachable area',exact:true}).click();
+  await expect(page.getByText('Paper does not fit reachable area',{exact:true})).toBeVisible();
+  await expect(page.locator('[data-setting="py"]')).toHaveValue('7.5');
+  expect(errors).toEqual([]);
+});
+
+test('deleted layers stay out of G-code and project reload without moving remaining layers',async({page})=>{
+  const errors=await ready(page);await load(page);
+  const blue=await page.evaluate(()=>window.__homelabPlotter.state().result.batches.find(b=>b.layer==='Blue').paths);
+  await page.getByRole('button',{name:'Delete Red #ff0000',exact:true}).click();
+  await page.waitForTimeout(350);await page.waitForFunction(()=>!window.__homelabPlotter.state().busy);
+  await expect(page.getByLabel('Enable Red #ff0000')).toHaveCount(0);
+  const saved=await page.evaluate(()=>window.__homelabPlotter.projectData());
+  await page.evaluate(o=>window.__homelabPlotter.openProject(o),saved);
+  await page.waitForTimeout(350);await page.waitForFunction(()=>!window.__homelabPlotter.state().busy);
+  const batches=await page.evaluate(()=>window.__homelabPlotter.state().result.batches);
+  expect(batches).toHaveLength(1);expect(batches[0].paths).toEqual(blue);
+  await page.getByRole('button',{name:'Select all',exact:true}).click();
+  await expect(page.getByLabel('Enable Red #ff0000')).toHaveCount(0);
+  await page.getByRole('button',{name:'Restore deleted layers',exact:true}).click();
+  await expect(page.getByLabel('Enable Red #ff0000')).toBeChecked();
+  expect(errors).toEqual([]);
+});
+
 test('offline startup, defaults, layers and project roundtrip',async({page})=>{
   const errors=await ready(page);await expect(page.locator('h1')).toHaveText('Homelab-Plotter Bambulab X2D');
-  for(const [key,value] of Object.entries({zup:'25.00',zdown:'14.00',bedx:'260',bedy:'260',margin:'0.0'}))await expect(page.locator('[data-setting="'+key+'"]').first()).toHaveValue(value);
+  for(const [key,value] of Object.entries({zup:'25.00',zdown:'14.00',bedx:'256',bedy:'256',px:'40.0',py:'5.5',headmaxx:'256.00',headmaxy:'256.00',margin:'0.0'}))await expect(page.locator('[data-setting="'+key+'"]').first()).toHaveValue(value);
   await load(page);await expect(page.getByLabel('Enable Red #ff0000')).toBeChecked();
   const original=await page.evaluate(()=>window.__homelabPlotter.projectData());
   expect(original.groups).toHaveLength(2);

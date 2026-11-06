@@ -2,15 +2,21 @@
 
 ## Piatto, testina e penna
 
-Il piatto è il rettangolo fisico usato come riferimento per collocare il foglio. I limiti X/Y della testina sono coordinate ugello indipendenti: non si ricavano dalle dimensioni fisiche del piatto. Il grigio rappresenta i punti sul piatto che la punta non può raggiungere con quei limiti e con l'offset impostato. I default 0–260 mm sono valori iniziali, non una misura certificata della corsa della X2D.
+Il riferimento predefinito del piano è 256×256 mm; A5 verticale a X40, Y5,5. Le quote sono riferite allo zero macchina, non automaticamente al bordo esterno di un piatto fisico più grande.
 
-La relazione usata è `ugello = punta + offset`. Con piatto 260×260, limiti testina 0–256 e offset +28/+35, la punta può raggiungere X0–228 e Y0–221. Fit e Center usano l'intersezione tra questa area e il foglio, senza spostare la carta impostata. Non viene verificato l'ingombro tridimensionale di clip, holder o altri accessori.
+Il piatto è il rettangolo fisico usato come riferimento per collocare il foglio. I limiti X/Y della testina sono coordinate ugello indipendenti: non si ricavano dalle dimensioni fisiche del piatto. Il grigio rappresenta i punti sul piatto che la punta non può raggiungere con quei limiti e con l'offset impostato. I default 0–256 mm sono una stima basata sull’area nominale di stampa della testina primaria, non una misura certificata degli estremi di corsa della X2D. Le preferenze già salvate nel browser rimangono invariate.
+
+La relazione usata è `ugello = punta + offset`. Con piatto 256×256, limiti testina 0–256 e offset +28/+35, la punta può raggiungere X0–228 e Y0–221. Fit e Center usano l'intersezione tra questa area e il foglio, senza spostare la carta impostata. Non viene verificato l'ingombro tridimensionale di clip, holder o altri accessori.
 
 Pen width preview rappresenta lo spessore della punta sul disegno. Non modifica il G-code, non compensa i contorni e non sottrae automaticamente metà diametro dai limiti del foglio: con margine 0 la traccia può sbordare di mezzo diametro.
+
+Center paper on bed centra il foglio sul piano fisico. Center paper in reachable area lo centra invece nell’area calcolata per la punta e rifiuta formati che non vi entrano interamente. Entrambi spostano le coordinate della carta: occorre spostare anche il foglio reale e adattare i relativi supporti. Con limiti 0–256, offset +28/+35 e A5 verticale: X40, Y5,5. Questi valori non considerano ingombri meccanici della cornice.
 
 ## Progetti e livelli
 
 Save project scarica un `.plotter.json` con SVG, formato carta, posizionamento, quote, opzioni, ordine e selezione dei gruppi. Open project lo ripristina. Gli SVG importati conservano livelli/gruppi e colori di riempimento e tratto. L'ordine scelto vale anche per le passate esportate.
+
+Delete rimuove un gruppo/colore dalla lista e da tutte le passate generate; Restore deleted layers lo recupera. La cancellazione è salvata nel progetto. L’SVG sorgente rimane incorporato per consentire il ripristino: non è una cancellazione definitiva dei dati dal file. Gli altri livelli conservano scala e posizione.
 
 Il file contiene le impostazioni del modo attivo; le preferenze dell'altro modo conservate nel browser non fanno parte del file. Non aprire un vecchio progetto assumendo che le sue quote Z siano ancora corrette sul montaggio attuale.
 
