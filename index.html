@@ -2270,6 +2270,8 @@ function buildUi() {
   U.paperW.onchange = customPaper; U.paperH.onchange = customPaper;
   var cor = rowNum2(g2, "Paper bottom-left corner X, Y [mm]", "px", "py", "corner", 0, 1000, 1, 1, 20, 20);
   U.px = cor[0]; U.py = cor[1];
+  g2.appendChild(h("div", { cls: "btnrow" }, [btn("Center paper on bed", centerPaper)]));
+  g2.appendChild(h("div", { cls: "infotxt", text: "Centers the physical sheet on the bed. Position your paper to match these coordinates; a fixed paper frame may use a different position." }));
   U.margin = rowNum(g2, "Margin [mm]", "margin", "margin", 0, 100, 1, 1, 0);
   U.lblArea = h("div", {cls:"infotxt", style:"margin-top:6px"});
   g2.appendChild(U.lblArea);
@@ -2697,6 +2699,15 @@ function rotate(delta) {
   while (r <= -180) r += 360;
   U.rot.set(r);
   paramChanged();
+}
+function centerPaper() {
+  var x=(U.bedX.get()-U.paperW.get())/2;
+  var y=(U.bedY.get()-U.paperH.get())/2;
+  if (x<0 || y<0)
+    return info("Paper does not fit", "The paper is larger than the print bed. Choose a smaller sheet or change its orientation before centering.");
+  updating=true;
+  U.px.set(x); U.py.set(y);
+  updating=false; paramChanged();
 }
 function centerDesign() {
   var p=readParams(), a=Engine.usablePaper(p,readMachine());
