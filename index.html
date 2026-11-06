@@ -2271,6 +2271,7 @@ function buildUi() {
   var cor = rowNum2(g2, "Paper bottom-left corner X, Y [mm]", "px", "py", "corner", 0, 1000, 1, 0.5, 40, 5.5);
   U.px = cor[0]; U.py = cor[1];
   g2.appendChild(h("div", { cls: "btnrow" }, [btn("Center paper on bed", centerPaper), btn("Center paper in reachable area", centerPaperReachable)]));
+  g2.appendChild(h("div", { cls: "btnrow" }, [btn("Use X2D paper and bed defaults", applyX2DDefaults)]));
   g2.appendChild(h("div", { cls: "infotxt", text: "Centers the physical sheet on the bed. Position your paper to match these coordinates; a fixed paper frame may use a different position." }));
   U.margin = rowNum(g2, "Margin [mm]", "margin", "margin", 0, 100, 1, 1, 0);
   U.lblArea = h("div", {cls:"infotxt", style:"margin-top:6px"});
@@ -2702,6 +2703,12 @@ function rotate(delta) {
   while (r <= -180) r += 360;
   U.rot.set(r);
   paramChanged();
+}
+function applyX2DDefaults() {
+  updating=true;
+  U.bedX.set(256);U.bedY.set(256);U.headMinX.set(0);U.headMinY.set(0);U.headMaxX.set(256);U.headMaxY.set(256);
+  U.toolX.set(28);U.toolY.set(35);U.paperW.set(148);U.paperH.set(210);U.preset.set(2);U.px.set(40);U.py.set(5.5);U.margin.set(0);
+  updating=false;paramChanged();saveSettings();
 }
 function centerPaper() {
   var x=(U.bedX.get()-U.paperW.get())/2;
